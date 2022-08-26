@@ -5,6 +5,88 @@ var banner_mask_alpha = parseFloat(page.banner_mask_alpha || theme.index.banner_
 var subtitle = page.subtitle || page.title
 %>
 
+<style>
+    .box_modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgba(94, 94, 94, 0.051);
+        /* Fallback color */
+        background-color: rgba(81, 81, 81, 0.032);
+        /* Black w/ opacity */
+    }
+
+    .box_modal_content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 300px;
+    }
+    /* 添加动画 */
+
+    .box_modal_content,
+    #caption {
+        -webkit-animation-name: zoom;
+        -webkit-animation-duration: 0.6s;
+        animation-name: zoom;
+        animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+        from {
+            -webkit-transform: scale(0)
+        }
+        to {
+            -webkit-transform: scale(1)
+        }
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+        to {
+            transform: scale(1)
+        }
+    }
+</style>
+<script>
+    var wechat_div = document.getElementById('wechat_show');
+    var wechatImg = document.getElementById("wechat_img");
+    wechat_click = document.getElementById('wechat');
+    wechat_click.onclick = function() {
+        wechat_div.style.display = "block";
+        wechatImg.src = "./img/wechat.png";
+    }
+    wechat_div.onclick = function() {
+        wechat_div.style.display = "none";
+    }
+</script>
+<div id="wechat_show" class="box_modal">
+    <!-- 弹窗内容 -->
+    <img class="box_modal_content" id="wechat_img">
+</div>
+<div class="cover-social-link" style="position: absolute;  top: 80%;
+width: 300px; display: flex; justify-content: space-evenly; flex-wrap: nowrap">
+    <a href="https://github.com/sisyphus1212/" class="tooltipped" target="_blank" data-tooltip="我的github" data-position="top" data-delay="50"> <i class="iconfont icon-github-fill"></i></a>
+    <a href="https://space.bilibili.com/228776952" class="tooltipped" target="_blank" data-tooltip="b站" data-position="top" data-delay="50"><i class="iconfont icon-bilibili-fill"></i> </a>
+    <a href="1250407709@qq.com" class="tooltipped" target="_blank" aria-label="1258407709@qq.com" data-position="top" data-delay="50"><i class="iconfont icon-mail"></i> </a>
+    <a id="wechat" class="tooltipped reward-link modal-trigger btn-medium waves-effect waves-light" data-tooltip="wechat" data-position="top" data-delay="50"><i class="iconfont icon-wechat-fill"></i> </a>
+    <a href="javascript:;" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50"><i class="iconfont icon-rss-fill"></i></a>
+</div>
 <div id="banner" class="banner" <%- theme.banner && theme.banner.parallax && 'parallax=true' %>
      style="background: url('<%- url_for(banner_img) %>') no-repeat center center; background-size: cover;">
   <div class="full-bg-img">
