@@ -1,0 +1,860 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/go.jpg">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="sisyphus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="linux udev 机制-2-实现原理经过前面章节的铺垫，对于 udev 以及 udev 的 rules 编写已经有了一个基本的概念，足够应付一些简单的应用场景，但是，这是不够的，作为一名合格的软件工程师，尤其是嵌入式软件工程师，必须深入到实现原理，了解 udev 的来龙去脉。 内核对设备的处理在 udev 系列的第一章中，我们就提到：对于支持热拔插的设备，先需要在设备树中进行注册，当设备硬件上">
+<meta property="og:type" content="article">
+<meta property="og:title" content="linux_udev机制实现-2">
+<meta property="og:url" content="https://sisyphus1212.github.io/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-2/index.html">
+<meta property="og:site_name" content="蚂蚁没问题">
+<meta property="og:description" content="linux udev 机制-2-实现原理经过前面章节的铺垫，对于 udev 以及 udev 的 rules 编写已经有了一个基本的概念，足够应付一些简单的应用场景，但是，这是不够的，作为一名合格的软件工程师，尤其是嵌入式软件工程师，必须深入到实现原理，了解 udev 的来龙去脉。 内核对设备的处理在 udev 系列的第一章中，我们就提到：对于支持热拔插的设备，先需要在设备树中进行注册，当设备硬件上">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-09-20-23-08-10.png?raw=true">
+<meta property="article:published_time" content="2022-09-20T16:04:03.000Z">
+<meta property="article:modified_time" content="2024-03-27T01:59:23.866Z">
+<meta property="article:author" content="sisyphus">
+<meta property="article:tag" content="kernel">
+<meta property="article:tag" content="netlink">
+<meta property="article:tag" content="linux驱动">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-09-20-23-08-10.png?raw=true">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>linux_udev机制实现-2 - 蚂蚁没问题</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"sisyphus1212.github.io","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":75,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<style>
+    .box_modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgba(94, 94, 94, 0.051);
+        /* Fallback color */
+        background-color: rgba(81, 81, 81, 0.032);
+        /* Black w/ opacity */
+    }
+
+    .box_modal_content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 150px;
+    }
+    /* 添加动画 */
+
+    .box_modal_content,
+    #caption {
+        -webkit-animation-name: zoom;
+        -webkit-animation-duration: 0.6s;
+        animation-name: zoom;
+        animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+        from {
+            -webkit-transform: scale(0)
+        }
+        to {
+            -webkit-transform: scale(1)
+        }
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+        to {
+            transform: scale(1)
+        }
+    }
+</style>
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>蚂蚁没问题</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于我
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/5.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="linux_udev机制实现-2"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-09-20 16:04" pubdate>
+          September 20, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          7.4k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          62 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+    <div id="wechat_show" class="box_modal" style="z-index: 999">
+        <!-- 弹窗内容 -->
+        <img class="box_modal_content" id="wechat_img">
+    </div>
+
+    <div id="sockial-link"  class="cover-social-link" style="color: var(--subtitle-color);--text-color: var(--navbar-text-color);z-index: 500;
+        position: absolute; transform: translateX(-50%); width: 200px; margin-top: -120px;
+    align-self: center; display: flex; justify-content: space-evenly; flex-wrap: nowrap; left: 50%;">
+        <a href="https://github.com/sisyphus1212/" class="tooltipped" target="_blank" data-tooltip="我的github" data-position="top" data-delay="50"> <i class="iconfont icon-github-fill"></i></a>
+        <a href="https://space.bilibili.com/228776952" class="tooltipped" target="_blank" data-tooltip="b站" data-position="top" data-delay="50"><i class="iconfont icon-bilibili-fill"></i> </a>
+        <a href="mailto:1250407709@qq.com" class="tooltipped" target="_blank" aria-label="1258407709@qq.com" data-position="top" data-delay="50"><i class="iconfont icon-mail"></i> </a>
+        <a id="wechat_id" class="tooltipped reward-link modal-trigger btn-medium waves-effect waves-light" data-tooltip="wechat" data-position="top" data-delay="50"><i class="iconfont icon-wechat-fill"></i> </a>
+        <a href="javascript:;" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50"><i class="iconfont icon-rss-fill"></i></a>
+    </div>
+  </header>
+
+  <main>
+    
+      
+<script> document.getElementById('sockial-link').style.display="none"</script>
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">linux_udev机制实现-2</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="linux-udev-机制-2-实现原理"><a href="#linux-udev-机制-2-实现原理" class="headerlink" title="linux udev 机制-2-实现原理"></a>linux udev 机制-2-实现原理</h2><p>经过前面章节的铺垫，对于 udev 以及 udev 的 rules 编写已经有了一个基本的概念，足够应付一些简单的应用场景，但是，这是不够的，作为一名合格的软件工程师，尤其是嵌入式软件工程师，必须深入到实现原理，了解 udev 的来龙去脉。</p>
+<h2 id="内核对设备的处理"><a href="#内核对设备的处理" class="headerlink" title="内核对设备的处理"></a>内核对设备的处理</h2><p>在 udev 系列的第一章中，我们就提到：对于支持热拔插的设备，先需要在设备树中进行注册，当设备硬件上连接到系统上时，通常硬件上就可以检测到设备的插入，通常是产生硬件中断事件，内核的中断处理中就会匹配到设备相应的驱动程序并执行，这个过程就属于内核中对设备的处理。</p>
+<p>内核中的驱动程序负责初始化设备，同时提供设备操作接口并导出到用户空间，实际上，内核是完全有权限直接在用户空间创建设备接口的，而且 devfs 也是这么做的，但是后续证明这一部分工作完全是可以在用户空间做的，也可以更灵活地实现，同时 devfs 本身也有各种各样的问题，也就推进了 udev 的发展，因此，2.6 之后的版本中，设备接口由 udevd 守护进程在用户空间接管。</p>
+<p>之前是直接通过内核创建，现在改为由用户空间管理，然而用户空间自然是无法接触到内核信息的，因此，需要实现内核与用户空间之间的通信，linux 中采用的是 netlink 套接字机制，这是一种异步通信机制，对于 netlink 套接字的介绍和使用，可以参<a target="_blank" rel="noopener" href="https://github.com/sisyphus1212/bloc_test/tree/master/brief_record/linux_driver/linux_udev_mech/uevent/netlink">https://github.com/sisyphus1212/bloc_test/tree/master/brief_record/linux_driver/linux_udev_mech/uevent/netlink</a> 详细地说明了 netlink 如何实现用户与内核、用户与用户之间的通信。</p>
+<p>另一个必要重要的点是，内核与用户之间传递了什么数据？对于设备的变动，在内核中为描述为设备事件，而 kuevent 事件机制专门用来处理内核事件，kuevent 是建立在 kobject&#x2F;kset 结构之上的，也就是和 sysfs 强相关的。</p>
+<p>对于某些行为，kuevent 会自动通过 netlink 将数据发送到用户空间，比如当驱动中直接或间接地调用了 kset_create_and_add 接口时，最终会调用到 kobject_uevent 函数，该函数负责设备信息的发送。同时，驱动程序中也可以显式地调用 kobject_uevent 相关的接口，直接发送设备消息到用户空间。关于内核的 kuevent 机制以及 kuevent 的实现，可以参考<a target="_blank" rel="noopener" href="https://github.com/sisyphus1212/bloc_test/tree/master/demo_code/kobject_and_kset%E3%80%82">https://github.com/sisyphus1212/bloc_test/tree/master/demo_code/kobject_and_kset。</a></p>
+<p>netlink 属于套接字的一种，用户空间的 udevd 守护进程一直在监听该套接字，也就能收到对应的内核消息。内核消息的格式通常是这样的:TODO.</p>
+<p>同时内核发送消息是广播的形式，你甚至可以自己实现一个应用程序来监听内核消息。如果你想在用户空间监听内核消息，可以试试我提供的这个 netlink server 端程序，用它来监听内核的 netlink 设备信息。<a target="_blank" rel="noopener" href="https://github.com/sisyphus1212/bloc_test/tree/master/brief_record/linux_driver/linux_udev_mech/uevent/netlink">https://github.com/sisyphus1212/bloc_test/tree/master/brief_record/linux_driver/linux_udev_mech/uevent/netlink</a></p>
+<p>在内核发送的消息中，有三个关键字是固定存在的：ACTION&#x3D;,DEVPATH&#x3D;,SUBSYSTEM&#x3D;,同时内核中也可以以键值对的方式自定义地添加关键字，比如 driver&#x3D;，这些关键字将会自动地添加到 udev 的关键字列表中，而在用户空间的 udev rules 文件中，匹配字段和关键字远远不止这几个，这是因为 udev 本身支持一些默认的、自定义的关键字，并不是所有匹配关键字都是由内核提供的，比如 KERNEL&#x3D;，这是 udev 通过判断设备内核名称所创建的关键字，在内核信息中是不包含 KERNEL&#x3D; 这个关键字的,所以如果要完全了解 udev 的配置项,除了了解内核发送的 netlink 消息,同时需要了解 udev 本身对设备的处理。</p>
+<h2 id="udevd-处理设备数据"><a href="#udevd-处理设备数据" class="headerlink" title="udevd 处理设备数据"></a>udevd 处理设备数据</h2><p>udev 软件上的实现分为两部分,一个是 udevd 守护进程,负责监听内核套接字,接收内核信息并处理,另一部分是客户端程序,客户端程序通过和守护进程交互获取设备信息或者对设备进行操作.</p>
+<p>在实际的实现中,存在一个问题:在开机启动时,内核会首先对所有设备进行枚举并逐个初始化,而这个时候用户空间还没有启动,udevd 自然也是没有启动的,所以在 udevd 真正被启动时,大部分的系统设备已经初始化完成,udevd 也错过了所有内核发送的设备事件信息.对于这个问题,内核是通过 sysfs 解决的,内核将设备相关的信息导出到 sysfs 中,在 udevd 启动时,通过读取 sysfs 文件系统就可以获取到设备信息,同时,使用客户端程序 udevadm trigger 命令重新生成设备事件,使用 udevadm 工具模拟内核发送设备事件的行为,让 udevd 重新处理错过的那些设备事件.</p>
+<h2 id="udevadm"><a href="#udevadm" class="headerlink" title="udevadm"></a>udevadm</h2><p>udevadm 是官方提供的一个用于调试管理 udevd 的一个客户端程序,集成了数据库查询,监视,触发等关键功能,下面是 udevadm 的相关使用方法.</p>
+<h3 id="udevadm-info"><a href="#udevadm-info" class="headerlink" title="udevadm info"></a>udevadm info</h3><p>对于 udevd 接收到的设备信息,会把它们存放到 udev 数据库中,使用客户端程序可以实现对数据库的操作,udevadm info 指令用于查询数据库内容.udevadm info 的指令格式如下:</p>
+<figure class="highlight coq"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs coq">udevadm info [options] [devpath|<span class="hljs-type">file</span>|<span class="hljs-type">unit</span>...]<br></code></pre></td></tr></table></figure>
+
+<p>udevadm info 带有一个选项和查询对象,这个对象可以是 &#x2F;dev 目录下的某个设备,也可以是 &#x2F;sys 目录下的某个路径,同时也支持 systemd 中的设备描述文件(必须以.device)结尾.</p>
+<p>udevadm info 支持以下选项:</p>
+<ul>
+<li>-q,–query&#x3D;TYPE:查询的指定类型的设备,TYPE 可以是下列值之一： name, symlink, path, property, all(默认值)</li>
+<li>-p,–path&#x3D;DEVPATH:指定目标设备在 &#x2F;sys 目录下的路径,因此可以省略 &#x2F;sys 目录前缀,udevadm info –path&#x3D;&#x2F;class&#x2F;block&#x2F;sda 和 udevadm info &#x2F;sys&#x2F;class&#x2F;block&#x2F;sda 是等价的.</li>
+<li>-n,–name&#x3D;FILE:设备在 &#x2F;dev 目录下的名称,也可以是一个软链接,同样的 &#x2F;dev 目录前缀可以省略,udevadm info –name&#x3D;sda 和 udevadm info &#x2F;dev&#x2F;sda 是相等的.</li>
+<li>-r,–root:以绝对路径显示 –query&#x3D;name 与 –query&#x3D;symlink 的查询结果</li>
+<li>-a,–attribute-walk:按照udev规则的格式，显示所有可用于匹配该设备的sysfs属性： 从该设备自身开始，沿着设备树向上回溯(一直到树根)， 显示沿途每个设备的sysfs属性。</li>
+<li>-x,–export:以 键&#x3D;’值’ 的格式输出此设备的属性(注意，值两边有单引号界定)。 仅在指定了 –query&#x3D;property 或 –device-id-of-file&#x3D;FILE 的情况下才有效。</li>
+<li>-d, –device-id-of-file&#x3D;FILE:显示设备文件所在底层设备的主&#x2F;次设备号,如果使用了此选项，那么将忽略所有位置参数。</li>
+<li>-e, –export-db:导出数据库的全部内容</li>
+<li>-c,–cleanup-db:清除 udev 数据库.</li>
+</ul>
+<h3 id="udevadm-trigger"><a href="#udevadm-trigger" class="headerlink" title="udevadm trigger"></a>udevadm trigger</h3><p>udev 的另一个调试利器就是 udevadm trigger，在系统启动时 udevd 会在内核驱动都初始化完成之后再启动，也就监听不到系统启动时内核发送的设备信息，正是由 udevadm trigger 重新生成设备事件，对于 udevd 来说，将这些设备信息当成由内核发送的来处理。</p>
+<h3 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h3><p>一般systemd-udev-trigger.service中应用udevadm trigger回放coldplug：<br>ExecStart&#x3D;&#x2F;bin&#x2F;udevadm trigger –type&#x3D;subsystems –action&#x3D;add ; &#x2F;bin&#x2F;udevadm trigger –type&#x3D;devices –action&#x3D;add</p>
+<p>同时，在系统正常运行时，基于调试的目的，也完全可以触发某个设备事件来模拟热插拔，下面是 udevadm trigger 的使用方法：</p>
+<ul>
+<li>-v, –verbose：显示将会被触发的设备列表，该设备列表对应 &#x2F;sys&#x2F;devices 目录下的大部分设备文件。</li>
+<li>-n, –dry-run：执行触发的动作，但是最后并不真正触发设备事件，也就是在执行 udevadm trigger 的基础上，最后不将数据发出，其它操作照样执行。</li>
+<li>-t, –type&#x3D;TYPE：仅触发特定类型的设备，TYPE 可以是下列值之一： devices(默认值), subsystems</li>
+<li>-s, –subsystem-match&#x3D;SUBSYSTEM：仅触发属于 SUBSYSTEM 子系统的设备事件。 可以在 SUBSYSTEM 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 OR 逻辑连接每个匹配规则， 也就是说，所有匹配的子系统中的设备都会被触发。SUBSYSTEM 的值可以参考 udev 中的 rules 文件。</li>
+<li>-S, –subsystem-nomatch&#x3D;SUBSYSTEM：不触发属于 SUBSYSTEM 子系统的设备事件。 可以在 SUBSYSTEM 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 AND 逻辑连接每个匹配规则， 也就是说，只有不匹配所有指定子系统的设备才会被触发。</li>
+<li>-a, –attr-match&#x3D;ATTRIBUTE&#x3D;VALUE：仅触发那些在设备的sysfs目录中存在 ATTRIBUTE 文件的设备事件。 如果同时还指定了”&#x3D;VALUE”，那么表示仅触发那些 ATTRIBUTE 文件的内容匹配 VALUE 的设备事件。 注意，可以在 VALUE 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 AND 逻辑连接每个匹配规则， 也就是说，只有匹配所有指定属性的设备才会被触发。</li>
+<li>-A, –attr-nomatch&#x3D;ATTRIBUTE&#x3D;VALUE：不触发那些在设备的sysfs目录中存在 ATTRIBUTE 文件的设备事件。 如果同时还指定了”&#x3D;VALUE”，那么表示不触发那些 ATTRIBUTE 文件的内容匹配 VALUE 的设备事件。 注意，可以在 VALUE 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 AND 逻辑连接每个匹配规则， 也就是说，只有不匹配所有指定属性的设备才会被触发。</li>
+<li>-p, –property-match&#x3D;PROPERTY&#x3D;VALUE：仅触发那些设备的 PROPERTY 属性值匹配 VALUE 的设备事件。注意，可以在 VALUE 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 OR 逻辑连接每个匹配规则， 也就是说，匹配任意一个属性值的设备都会被触发。</li>
+<li>-g, –tag-match&#x3D;PROPERTY：仅触发匹配 PROPERTY 标签的设备事件。如果多次使用此选项， 那么表示以 AND 逻辑连接每个匹配规则，也就是说，只有匹配所有指定标签的设备才会被触发。</li>
+<li>-y, –sysname-match&#x3D;SYSNAME：仅触发设备sys名称(也就是该设备在 &#x2F;sys 路径下最末端的文件名)匹配 SYSNAME 的设备事件。 注意，可以在 SYSNAME 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 OR 逻辑连接每个匹配规则， 也就是说，匹配任意一个sys名称的设备都会被触发。</li>
+<li>–name-match&#x3D;DEVPATH：触发给定设备及其所有子设备的事件。DEVPATH 是该设备在 &#x2F;dev 目录下的路径。 如果多次使用此选项，那么仅以最后一个为准。</li>
+<li>-b, –parent-match&#x3D;SYSPATH：触发给定设备及其所有子设备的事件。SYSPATH 是该设备在 &#x2F;sys 目录下的路径。 如果多次使用此选项，那么仅以最后一个为准。</li>
+<li>-w, –settle：除了触发设备事件之外，还要等待这些事件完成。 注意，此选项仅等待该命令自身触发的事件完成， 而 udevadm settle 则要一直等到 所有设备事件全部完成。</li>
+<li>–wait-daemon[&#x3D;SECONDS]：在触发设备事件之前，等待 systemd-udevd 守护进程完成初始化。 默认等待 5 秒之后超时(可以使用 SECONDS 参数修改)。 此选项等价于在 udevadm trigger 命令之前先使用 udevadm control –ping 命令。</li>
+</ul>
+<p>udevadm 的大部分指令都是为了实现灵活地触发设备事件而设计，有个印象就好，需要用到的时候使用 udevadm trigger -h 或者查找<a target="_blank" rel="noopener" href="https://www.freedesktop.org/software/systemd/man/udevadm.html">官方手册</a>就好。</p>
+<h3 id="udevadm-info-示例"><a href="#udevadm-info-示例" class="headerlink" title="udevadm info 示例"></a>udevadm info 示例</h3><p>使用 udevadm info 的目的在于查看设备保存在数据库中的信息，同样以 rtc 为例，看看 udevadm info 所展示的信息是否和内核设备事件发送的信息一致：</p>
+<figure class="highlight dts"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs dts">udevadm info -n <span class="hljs-keyword">/dev/</span>rtc<br><span class="hljs-symbol"></span><br><span class="hljs-symbol">P:</span> <span class="hljs-keyword">/devices/</span>platform<span class="hljs-keyword">/ocp/</span><span class="hljs-number">44e3</span>e000.rtc<span class="hljs-keyword">/rtc/</span>rtc0<br><span class="hljs-symbol">N:</span> rtc0<br><span class="hljs-symbol">L:</span> <span class="hljs-number">-100</span><br><span class="hljs-symbol">S:</span> rtc<br><span class="hljs-symbol">E:</span> DEVLINKS=<span class="hljs-keyword">/dev/</span>rtc<br><span class="hljs-symbol">E:</span> DEVNAME=<span class="hljs-keyword">/dev/</span>rtc0<br><span class="hljs-symbol">E:</span> DEVPATH=<span class="hljs-keyword">/devices/</span>platform<span class="hljs-keyword">/ocp/</span><span class="hljs-number">44e3</span>e000.rtc<span class="hljs-keyword">/rtc/</span>rtc0<br><span class="hljs-symbol">E:</span> MAJOR=<span class="hljs-number">252</span><br><span class="hljs-symbol">E:</span> MINOR=<span class="hljs-number">0</span><br><span class="hljs-symbol">E:</span> SUBSYSTEM=rtc<br><span class="hljs-symbol">E:</span> USEC_INITIALIZED=<span class="hljs-number">2550426</span><br><span class="hljs-symbol">E:</span> net.<span class="hljs-attr">ifnames</span><span class="hljs-operator">=</span><span class="hljs-number">0</span><br></code></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ul>
+<li>P 表示 PATH，即设备路径</li>
+<li>N 表示 Name，对应设备内核名称</li>
+<li>L 表示 udev 中 OPTION 字段的 link_priority 属性，因为 rtc 是一个软链接，如果为多个不同的设备指定了相同的软连接， 那么实际的软连接将指向 link_priority 值最高的设备。</li>
+<li>S 表示 SUBSYSTEM，对应子系统的名称。</li>
+<li>E 表示 ENV，表示全局变量。</li>
+</ul>
+<p>同时，为了验证该设备触发时内核发送的消息，使用我自己编写的客户端程序(github地址:TODO)接收内核消息，然后使用 udevadm trigger –action&#x3D;add  &#x2F;dev&#x2F;rtc 触发 rtc 设备，得到的消息为：</p>
+<figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs awk">add@<span class="hljs-regexp">/devices/</span>platform<span class="hljs-regexp">/ocp/</span><span class="hljs-number">44</span>e3e000.rtc<span class="hljs-regexp">/rtc/</span>rtc0<span class="hljs-regexp">/omap_rtc_scratch0 ACTION=add DEVPATH=/</span>devices<span class="hljs-regexp">/platform/</span>ocp<span class="hljs-regexp">/44e3e000.rtc/</span>rtc<span class="hljs-regexp">/rtc0/</span>omap_rtc_scratch0 SUBSYSTEM=nvmem SYNTH_UUID=<span class="hljs-number">0</span> SEQNUM=<span class="hljs-number">4270</span><br></code></pre></td></tr></table></figure>
+
+<p>在内核发送的消息中,包含 ACTION&#x3D;,DEVPATH&#x3D;,SUBSYSTEM&#x3D;,SYNTH_UUID&#x3D;,SEQNUM&#x3D; 等字段.其中,ACTION&#x3D;,SEQNUM&#x3D; 等字段是针对解析过程的,不需要持久地保存在数据库中.</p>
+<p>同时,在介绍 uevent 的文章中(TODO)有提到:内核在发送设备信息到用户空间时,默认存在三个字段:ACTION&#x3D;,DEVPATH&#x3D;,SUBSYSTEM&#x3D;,除此之外,用户还可以提供自定义的 uevent 函数添加字段,比如内核中大部分硬件设备都会添加 MAJOR&#x3D;,MINOR&#x3D;,DEVNAME&#x3D; 等字段,这些字段除了会被一起发送到用户空间,同时也会通过对应 &#x2F;sys 目录下的 uevent 文件导出,你可以通过查看 &#x2F;sys 下的各个 uevent 文件进行对比.</p>
+<p>经过对比发现,正如前文中所说的,udev 设备信息数据并非完全来自于内核消息,另外的部分可能来自于 &#x2F;sys 对应目录下设备文件,还有可能是由 udev 程序产生的,比如上文中的 USEC_INITIALIZED 环境变量,link_priority 的值.</p>
+<h3 id="udevadm-test"><a href="#udevadm-test" class="headerlink" title="udevadm test"></a>udevadm test</h3><p>如果要了解 udev 对内核事件的处理过程，可以通过 udevadm test 命令来实现，该命令模拟一个设备事件，并输出调试信息。</p>
+<p>下面是命令的格式：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs css">udevadm test <span class="hljs-selector-attr">[options]</span> <span class="hljs-selector-attr">[devpath]</span><br></code></pre></td></tr></table></figure>
+
+<p>模拟一个udev事件，打印出debug信息。</p>
+<p>常用：<br>udevadm test $(udevadm info -q path -n &#x2F;dev&#x2F;sda) 2&gt;&amp;1  ;加载前测试设备规则<br>udevadm test &#x2F;sys&#x2F;class&#x2F;block&#x2F;sda    ;也可指定设备路径，加载前测试设备规则<br>udevadm test-builtin [options] [command] devpath</p>
+<p>需要注意的是，这个命令只支持 &#x2F;sys 下的设备文件，而不支持 &#x2F;dev 目录下的设备节点，udevadm test 命令的输出为：</p>
+<ul>
+<li>哪些配置目录、文件的时间戳被更新，哪个配置文件将会使用</li>
+<li>依次输出 udev 扫描的 .rules 文件，尽管该 .rules 文件没有匹配成功。</li>
+<li>依次输出与当前设备匹配的规则，并打印该条规则属于哪个 .rules(规则文件) 的哪一行。</li>
+<li>输出当前设备匹配的配置文件</li>
+<li>输出当次设备事件的所有全局变量，这些全局变量以键值对的方式输出</li>
+</ul>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/linux/" class="category-chain-item">linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/" class="category-chain-item">网络开发</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E9%A9%B1%E5%8A%A8/" class="category-chain-item">驱动</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E9%A9%B1%E5%8A%A8/udev/" class="category-chain-item">udev</a>
+  
+  
+
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/kernel/">#kernel</a>
+      
+        <a href="/tags/netlink/">#netlink</a>
+      
+        <a href="/tags/linux%E9%A9%B1%E5%8A%A8/">#linux驱动</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>linux_udev机制实现-2</div>
+      <div>https://sisyphus1212.github.io/2022/09/20/linux/内核-驱动/udev/linux_udev机制实现-2/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>sisyphus</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>September 20, 2022</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>Licensed under</div>
+        <div>
+          
+            
+            
+              <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-0/" title="linux_udev机制实现-0">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">linux_udev机制实现-0</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-1/" title="linux_udev机制实现-1">
+                        <span class="hidden-mobile">linux_udev机制实现-1</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#comments', function() {
+      var light = 'github-light';
+      var dark = 'github-dark';
+      var schema = document.documentElement.getAttribute('data-user-color-scheme');
+      if (schema === 'dark') {
+        schema = dark;
+      } else {
+        schema = light;
+      }
+      window.UtterancesThemeLight = light;
+      window.UtterancesThemeDark = dark;
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'sisyphus1212/comments');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', schema);
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    })
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        被访:次数:
+        <span id="busuanzi_value_site_pv"></span>
+        
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        人数:
+        <span id="busuanzi_value_site_uv"></span>
+        
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+  <script>
+    var wechat_div = document.getElementById('wechat_show');
+    var wechatImg = document.getElementById("wechat_img");
+    wechat_click = document.getElementById('wechat_id');
+    wechat_click.onclick = function() {
+        wechat_div.style.display = "block";
+        wechatImg.src = "./img/wechat.png";
+    }
+    wechat_div.onclick = function() {
+        wechat_div.style.display = "none";
+    }
+</script>
+</body>
+</html>

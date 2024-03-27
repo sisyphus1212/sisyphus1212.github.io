@@ -1,0 +1,845 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/go.jpg">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="sisyphus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="dropwatch 监控内核的网络栈丢包dropwatch 的功能dropwatch 功能可以用来监控内核的网络栈丢弃的数据包。 接收的数据包在内核中被丢弃，很多时候并不会在日志中记录，一般难以发现。 启用内核 dropwatch 功能dropwatch 功能需要开启 CONFIG_NET_DROP_MONITOR 配置，在我的虚机中，相关的配置信息如下： 12lcj@debian:~$ grep">
+<meta property="og:type" content="article">
+<meta property="og:title" content="dropwatch 监控内核的网络栈丢包">
+<meta property="og:url" content="https://sisyphus1212.github.io/2020/11/01/network/debug/dropwatch_%E7%9B%91%E6%8E%A7%E5%86%85%E6%A0%B8%E7%9A%84%E7%BD%91%E7%BB%9C%E6%A0%88%E4%B8%A2%E5%8C%85/index.html">
+<meta property="og:site_name" content="蚂蚁没问题">
+<meta property="og:description" content="dropwatch 监控内核的网络栈丢包dropwatch 的功能dropwatch 功能可以用来监控内核的网络栈丢弃的数据包。 接收的数据包在内核中被丢弃，很多时候并不会在日志中记录，一般难以发现。 启用内核 dropwatch 功能dropwatch 功能需要开启 CONFIG_NET_DROP_MONITOR 配置，在我的虚机中，相关的配置信息如下： 12lcj@debian:~$ grep">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2020-11-01T18:21:45.000Z">
+<meta property="article:modified_time" content="2024-03-27T01:59:23.862Z">
+<meta property="article:author" content="sisyphus">
+<meta property="article:tag" content="网络网络协议栈">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>dropwatch 监控内核的网络栈丢包 - 蚂蚁没问题</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"sisyphus1212.github.io","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":75,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<style>
+    .box_modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgba(94, 94, 94, 0.051);
+        /* Fallback color */
+        background-color: rgba(81, 81, 81, 0.032);
+        /* Black w/ opacity */
+    }
+
+    .box_modal_content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 150px;
+    }
+    /* 添加动画 */
+
+    .box_modal_content,
+    #caption {
+        -webkit-animation-name: zoom;
+        -webkit-animation-duration: 0.6s;
+        animation-name: zoom;
+        animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+        from {
+            -webkit-transform: scale(0)
+        }
+        to {
+            -webkit-transform: scale(1)
+        }
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+        to {
+            transform: scale(1)
+        }
+    }
+</style>
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>蚂蚁没问题</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于我
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/5.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="dropwatch 监控内核的网络栈丢包"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2020-11-01 18:21" pubdate>
+          November 1, 2020 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.8k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          74 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+    <div id="wechat_show" class="box_modal" style="z-index: 999">
+        <!-- 弹窗内容 -->
+        <img class="box_modal_content" id="wechat_img">
+    </div>
+
+    <div id="sockial-link"  class="cover-social-link" style="color: var(--subtitle-color);--text-color: var(--navbar-text-color);z-index: 500;
+        position: absolute; transform: translateX(-50%); width: 200px; margin-top: -120px;
+    align-self: center; display: flex; justify-content: space-evenly; flex-wrap: nowrap; left: 50%;">
+        <a href="https://github.com/sisyphus1212/" class="tooltipped" target="_blank" data-tooltip="我的github" data-position="top" data-delay="50"> <i class="iconfont icon-github-fill"></i></a>
+        <a href="https://space.bilibili.com/228776952" class="tooltipped" target="_blank" data-tooltip="b站" data-position="top" data-delay="50"><i class="iconfont icon-bilibili-fill"></i> </a>
+        <a href="mailto:1250407709@qq.com" class="tooltipped" target="_blank" aria-label="1258407709@qq.com" data-position="top" data-delay="50"><i class="iconfont icon-mail"></i> </a>
+        <a id="wechat_id" class="tooltipped reward-link modal-trigger btn-medium waves-effect waves-light" data-tooltip="wechat" data-position="top" data-delay="50"><i class="iconfont icon-wechat-fill"></i> </a>
+        <a href="javascript:;" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50"><i class="iconfont icon-rss-fill"></i></a>
+    </div>
+  </header>
+
+  <main>
+    
+      
+<script> document.getElementById('sockial-link').style.display="none"</script>
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">dropwatch 监控内核的网络栈丢包</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="dropwatch-监控内核的网络栈丢包"><a href="#dropwatch-监控内核的网络栈丢包" class="headerlink" title="dropwatch 监控内核的网络栈丢包"></a>dropwatch 监控内核的网络栈丢包</h1><h2 id="dropwatch-的功能"><a href="#dropwatch-的功能" class="headerlink" title="dropwatch 的功能"></a>dropwatch 的功能</h2><p>dropwatch 功能可以用来监控内核的网络栈丢弃的数据包。</p>
+<p>接收的数据包在内核中被丢弃，很多时候并不会在日志中记录，一般难以发现。</p>
+<h2 id="启用内核-dropwatch-功能"><a href="#启用内核-dropwatch-功能" class="headerlink" title="启用内核 dropwatch 功能"></a>启用内核 dropwatch 功能</h2><p>dropwatch 功能需要开启 CONFIG_NET_DROP_MONITOR 配置，在我的虚机中，相关的配置信息如下：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">lcj</span>@debian:~$ grep &#x27;NET_DROP_MONITOR&#x27; /boot/config-<span class="hljs-number">4</span>.<span class="hljs-number">19</span>.<span class="hljs-number">0</span>-<span class="hljs-number">8</span>-amd64<br><span class="hljs-attribute">CONFIG_NET_DROP_MONITOR</span>=m<br></code></pre></td></tr></table></figure>
+
+<h2 id="加载-dropwatch-相关的内核模块"><a href="#加载-dropwatch-相关的内核模块" class="headerlink" title="加载 dropwatch 相关的内核模块"></a>加载 dropwatch 相关的内核模块</h2><p>可以看到，CONFIG_NET_DROP_MONITOR 被编译为了独立的内核模块。我在 &#x2F;lib&#x2F;modules 中搜索，找到了名为 drop_monitor.ko 的内核模块，这个就是 dropwatch 的内核模块。这之后我执行 modprobe 进行加载，并在加载完成后检索 lsmod 的结果，确认模块加载成功。</p>
+<p>操作记录如下：</p>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs gradle">lcj@debian:~$ <span class="hljs-keyword">find</span> <span class="hljs-regexp">/lib/m</span>odules<span class="hljs-regexp">/4.19.0-8-amd64/</span> -name <span class="hljs-string">&#x27;*monitor.ko&#x27;</span><br><span class="hljs-regexp">/lib/m</span>odules<span class="hljs-regexp">/4.19.0-8-amd64/</span>kernel<span class="hljs-regexp">/net/</span>core/drop_monitor.ko<br>lcj@debian:~$ sudo modprobe drop_monitor<br>lcj@debian:~$ lsmod | <span class="hljs-keyword">grep</span> <span class="hljs-string">&#x27;drop_monitor&#x27;</span><br>drop_monitor           <span class="hljs-number">20480</span>  <span class="hljs-number">0</span><br></code></pre></td></tr></table></figure>
+
+<p>dropwatch 是使用 Kernel Tracepoint API 安装的，在各协议释放 socket 缓冲区时收集信息。</p>
+<h2 id="手动编译-dropwatch"><a href="#手动编译-dropwatch" class="headerlink" title="手动编译 dropwatch"></a>手动编译 dropwatch</h2><p>下载到源码后，在源码中首先执行如下命令：</p>
+<figure class="highlight angelscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs angelscript">./<span class="hljs-built_in">auto</span>gen.sh<br></code></pre></td></tr></table></figure>
+
+<p>执行后报错信息如下：</p>
+<figure class="highlight stata"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs stata">configure.<span class="hljs-keyword">ac</span>:16: <span class="hljs-keyword">error</span>: possibly undefined <span class="hljs-keyword">macro</span>: AC_MSG_ERROR<br>      <span class="hljs-keyword">If</span> this <span class="hljs-keyword">token</span> and others are legitimate, please <span class="hljs-keyword">use</span> m4_pattern_allow.<br>      See the Autoconf documentation.<br>configure.<span class="hljs-keyword">ac</span>:20: <span class="hljs-keyword">error</span>: possibly undefined <span class="hljs-keyword">macro</span>: AC_CHECK_LIB<br></code></pre></td></tr></table></figure>
+
+<p>网上搜索找到了如下链接：</p>
+<p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/8811381/possibly-undefined-macro-ac-msg-error">possibly-undefined-macro-ac-msg-error</a></p>
+<p>从其中的一个回答中看出可能是没有安装 pkg-config 命令造成的问题。执行如下命令安装 pkg-config 命令。</p>
+<figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs mipsasm">sudo apt-get  --fix-<span class="hljs-keyword">broken </span><span class="hljs-keyword">install </span>pkg-<span class="hljs-built_in">config</span><br></code></pre></td></tr></table></figure>
+
+<p>安装完成后，重新执行 autogen.sh 脚本，这次能够成功执行了。</p>
+<h3 id="x2F-configure-报错"><a href="#x2F-configure-报错" class="headerlink" title=".&#x2F;configure 报错"></a>.&#x2F;configure 报错</h3><p>执行 .&#x2F;configure 有如下报错：</p>
+<figure class="highlight vbnet"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs vbnet"><span class="hljs-symbol">configure:</span> <span class="hljs-keyword">error</span>: libpcap <span class="hljs-built_in">is</span> required<br></code></pre></td></tr></table></figure>
+
+<p>执行如下命令安装 libpcap-dev 解决这个问题。</p>
+<figure class="highlight q"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs q">sudo apt-<span class="hljs-built_in">get</span> install libpcap-<span class="hljs-built_in">dev</span><br></code></pre></td></tr></table></figure>
+
+<h4 id="Couldn’t-find-or-include-bfd-h"><a href="#Couldn’t-find-or-include-bfd-h" class="headerlink" title="Couldn’t find or include bfd.h"></a>Couldn’t find or include bfd.h</h4><p>重新执行 .&#x2F;configure 又报了新的错误，错误内容如下：</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs nginx"><span class="hljs-attribute">checking</span> bfd.h usability... <span class="hljs-literal">no</span><br>checking bfd.h presence... <span class="hljs-literal">no</span><br>checking for bfd.h... <span class="hljs-literal">no</span><br>configure: <span class="hljs-literal">error</span>: Couldn<span class="hljs-string">&#x27;t find or include bfd.h</span><br></code></pre></td></tr></table></figure>
+
+<p>这应该是需要安装某个库的头文件。我执行 apt-cache search 搜索相关的内容，并根据经验选择安装 libbsd-dev 函数库，这之后发现还有问题。操作记录如下：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">lcj</span>@debian:~/dropwatch-<span class="hljs-number">1</span>.<span class="hljs-number">5</span>.<span class="hljs-number">3</span>$ sudo apt-cache search bsd | grep libbsd<br><span class="hljs-attribute">libbsd</span>-dev - utility functions from BSD systems - development files<br><span class="hljs-attribute">libbsd0</span> - utility functions from BSD systems - shared library<br><span class="hljs-attribute">libbsd</span>-arc4random-perl - CPAN&#x27;s BSD::arc4random -- Perl bindings for arc4random<br><span class="hljs-attribute">libbsd</span>-resource-perl - BSD process resource limit and priority functions<br><span class="hljs-attribute">lcj</span>@debian:~/dropwatch-<span class="hljs-number">1</span>.<span class="hljs-number">5</span>.<span class="hljs-number">3</span>$<br><span class="hljs-attribute">lcj</span>@debian:~/dropwatch-<span class="hljs-number">1</span>.<span class="hljs-number">5</span>.<span class="hljs-number">3</span>$ sudo apt-get install libbsd-dev<br><span class="hljs-attribute">lcj</span>@debian:~/dropwatch-<span class="hljs-number">1</span>.<span class="hljs-number">5</span>.<span class="hljs-number">3</span>$<br></code></pre></td></tr></table></figure>
+
+<p>网上搜索找到了如下链接：<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/8003763/compile-errors-using-bfd-h-on-linux">compile errors using bfd.h on linux</a>.</p>
+<p>执行如下命令安装 binutils-dev 组件：</p>
+<figure class="highlight q"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs q">sudo apt-<span class="hljs-built_in">get</span> install binutils-<span class="hljs-built_in">dev</span><br></code></pre></td></tr></table></figure>
+
+<p>安装成功后 .&#x2F;configure 命令成功执行。</p>
+<h3 id="make-操作报错"><a href="#make-操作报错" class="headerlink" title="make 操作报错"></a>make 操作报错</h3><p>这之后执行 make 命令时又有新的报错，报错信息如下：</p>
+<figure class="highlight maxima"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs maxima">main.c:<span class="hljs-number">23</span>:<span class="hljs-number">10</span>: fatal <span class="hljs-built_in">error</span>: <span class="hljs-built_in">readline</span>/<span class="hljs-built_in">readline</span>.h: No such file <span class="hljs-keyword">or</span> <span class="hljs-built_in">directory</span><br> #include &lt;<span class="hljs-built_in">readline</span>/<span class="hljs-built_in">readline</span>.h&gt;<br></code></pre></td></tr></table></figure>
+
+<p>执行如下命令解决这个问题：</p>
+<figure class="highlight elixir"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs elixir">lcj<span class="hljs-variable">@debian</span><span class="hljs-symbol">:~/dropwatch-</span><span class="hljs-number">1.5</span>.<span class="hljs-number">3</span><span class="hljs-variable">$ </span>sudo apt-get install libreadline-dev<br></code></pre></td></tr></table></figure>
+
+<p>再次 make 又报了如下错误：</p>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs gradle"><span class="hljs-regexp">/usr/</span>bin/ld: cannot <span class="hljs-keyword">find</span> -lnl-genl-<span class="hljs-number">3</span><br></code></pre></td></tr></table></figure>
+
+<p>执行如下命令可以解决这个问题：</p>
+<figure class="highlight elixir"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs elixir">lcj<span class="hljs-variable">@debian</span><span class="hljs-symbol">:~/dropwatch-</span><span class="hljs-number">1.5</span>.<span class="hljs-number">3</span><span class="hljs-variable">$ </span>sudo apt-get install libnl-genl<span class="hljs-number">-3</span>-dev<br></code></pre></td></tr></table></figure>
+
+<h3 id="成功编译"><a href="#成功编译" class="headerlink" title="成功编译"></a>成功编译</h3><figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs stylus">lcj@debian:~/dropwatch-<span class="hljs-number">1.5</span>.<span class="hljs-number">3</span>$ make<br>make  <span class="hljs-attribute">all</span>-recursive<br>make<span class="hljs-selector-attr">[1]</span>: Entering directory <span class="hljs-string">&#x27;/home/lcj/dropwatch-1.5.3&#x27;</span><br>Making <span class="hljs-attribute">all</span> in src<br>make<span class="hljs-selector-attr">[2]</span>: Entering directory <span class="hljs-string">&#x27;/home/lcj/dropwatch-1.5.3/src&#x27;</span><br>/usr/bin/bash ../libtool  <span class="hljs-attr">--tag</span>=CC   <span class="hljs-attr">--mode</span>=link gcc -g -Wall -Werror -I/usr/include/libnl3  -g -O2 -lnl-<span class="hljs-number">3</span> -lnl-genl-<span class="hljs-number">3</span> -lreadline -lpcap -lbfd  -o dropwatch <span class="hljs-selector-tag">main</span><span class="hljs-selector-class">.o</span> lookup<span class="hljs-selector-class">.o</span> lookup_kas<span class="hljs-selector-class">.o</span> lookup_bfd<span class="hljs-selector-class">.o</span>  -lpcap<br>libtool: link: gcc -g -Wall -Werror -I/usr/include/libnl3 -g -O2 -o dropwatch <span class="hljs-selector-tag">main</span><span class="hljs-selector-class">.o</span> lookup<span class="hljs-selector-class">.o</span> lookup_kas<span class="hljs-selector-class">.o</span> lookup_bfd<span class="hljs-selector-class">.o</span>  -lnl-<span class="hljs-number">3</span> -lnl-genl-<span class="hljs-number">3</span> -lreadline -lbfd -lpcap<br>/usr/bin/bash ../libtool  <span class="hljs-attr">--tag</span>=CC   <span class="hljs-attr">--mode</span>=link gcc -g -Wall -Werror -I/usr/include/libnl3  -g -O2 -lnl-<span class="hljs-number">3</span> -lnl-genl-<span class="hljs-number">3</span> -lreadline -lpcap -lbfd  -o dwdump dwdump<span class="hljs-selector-class">.o</span>  -lpcap<br>libtool: link: gcc -g -Wall -Werror -I/usr/include/libnl3 -g -O2 -o dwdump dwdump<span class="hljs-selector-class">.o</span>  -lnl-<span class="hljs-number">3</span> -lnl-genl-<span class="hljs-number">3</span> -lreadline -lbfd -lpcap<br>make<span class="hljs-selector-attr">[2]</span>: Leaving directory <span class="hljs-string">&#x27;/home/lcj/dropwatch-1.5.3/src&#x27;</span><br>Making <span class="hljs-attribute">all</span> in doc<br>make<span class="hljs-selector-attr">[2]</span>: Entering directory <span class="hljs-string">&#x27;/home/lcj/dropwatch-1.5.3/doc&#x27;</span><br>make<span class="hljs-selector-attr">[2]</span>: Nothing to be done <span class="hljs-keyword">for</span> <span class="hljs-string">&#x27;all&#x27;</span>.<br>make<span class="hljs-selector-attr">[2]</span>: Leaving directory <span class="hljs-string">&#x27;/home/lcj/dropwatch-1.5.3/doc&#x27;</span><br>Making <span class="hljs-attribute">all</span> in tests<br>make<span class="hljs-selector-attr">[2]</span>: Entering directory <span class="hljs-string">&#x27;/home/lcj/dropwatch-1.5.3/tests&#x27;</span><br>make<span class="hljs-selector-attr">[2]</span>: Nothing to be done <span class="hljs-keyword">for</span> <span class="hljs-string">&#x27;all&#x27;</span>.<br>make<span class="hljs-selector-attr">[2]</span>: Leaving directory <span class="hljs-string">&#x27;/home/lcj/dropwatch-1.5.3/tests&#x27;</span><br>make<span class="hljs-selector-attr">[2]</span>: Entering directory <span class="hljs-string">&#x27;/home/lcj/dropwatch-1.5.3&#x27;</span><br>make<span class="hljs-selector-attr">[2]</span>: Leaving directory <span class="hljs-string">&#x27;/home/lcj/dropwatch-1.5.3&#x27;</span><br>make<span class="hljs-selector-attr">[1]</span>: Leaving directory <span class="hljs-string">&#x27;/home/lcj/dropwatch-1.5.3&#x27;</span><br></code></pre></td></tr></table></figure>
+
+<h2 id="运行-dropwatch"><a href="#运行-dropwatch" class="headerlink" title="运行 dropwatch"></a>运行 dropwatch</h2><p>进入 src 目录中执行 dropwatch 命令，操作记录如下：</p>
+<figure class="highlight crmsh"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs crmsh">lcj@debian:~/dropwatch-<span class="hljs-number">1.5</span>.<span class="hljs-number">3</span>/src$ ./dropwatch<br>Initializing null lookup method<br>dropwatch&gt; <span class="hljs-literal">start</span><br>Enabling monitoring...<br>Kernel monitoring activated.<br>Issue Ctrl-C to <span class="hljs-literal">stop</span> monitoring<br><span class="hljs-number">6</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff9406e5b6</span> [software]<br><span class="hljs-number">6</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff9403171b</span> [software]<br><span class="hljs-number">4</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff9406e5b6</span> [software]<br><span class="hljs-number">10</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff9403171b</span> [software]<br><span class="hljs-number">3</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff9406e5b6</span> [software]<br><span class="hljs-number">12</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff9403171b</span> [software]<br><span class="hljs-number">16</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff9403171b</span> [software]<br><span class="hljs-number">4</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff9406e5b6</span> [software]<br><span class="hljs-number">2</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff93fe192f</span> [software]<br><span class="hljs-number">6</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff9403171b</span> [software]<br><span class="hljs-number">3</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff9406e5b6</span> [software]<br><span class="hljs-number">1</span> drops at <span class="hljs-keyword">location</span> <span class="hljs-title">0xffffffff93fe192f</span> [software]<br></code></pre></td></tr></table></figure>
+
+<p>左边数值为丢弃包的数目，location 右边是内核函数的地址。</p>
+<p>dropwatch -l kas 指定使用内核符号表。</p>
+<figure class="highlight subunit"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs subunit">lcj@debian:~/dropwatch<span class="hljs-string">-1</span>.5.3/src$ ./dropwatch -l kas<br>Initializing kallsyms db<br>dropwatch&gt; start<br>Enabling monitoring...<br>Kernel monitoring activated.<br>Issue Ctrl-C to stop monitoring<br><span class="hljs-keyword">Error </span>Scanning File: : Success<br>5 drops at location 0xffffffff9403171b [software]<br><span class="hljs-keyword">Error </span>Scanning File: : Success<br>4 drops at location 0xffffffff9406e5b6 [software]<br><span class="hljs-keyword">Error </span>Scanning File: : Success<br>2 drops at location 0xffffffff9403171b [software]<br><span class="hljs-keyword">Error </span>Scanning File: : Success<br>4 drops at location 0xffffffff9406e5b6 [software]<br></code></pre></td></tr></table></figure>
+
+<p>网上搜索了下，发现没有显示函数的原因在于我使用普通用户访问 &#x2F;proc&#x2F;kallsyms 文件。</p>
+<h2 id="普通用户与-root-用户查看-x2F-proc-x2F-kallsyms-文件"><a href="#普通用户与-root-用户查看-x2F-proc-x2F-kallsyms-文件" class="headerlink" title="普通用户与 root 用户查看 &#x2F;proc&#x2F;kallsyms 文件"></a>普通用户与 root 用户查看 &#x2F;proc&#x2F;kallsyms 文件</h2><p>普通用户查看 &#x2F;proc&#x2F;kallsyms 文件的部分输出信息如下：</p>
+<figure class="highlight basic"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs basic"><span class="hljs-symbol">0000000000000000 </span>d descriptor.<span class="hljs-number">42136</span>     [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>d descriptor.<span class="hljs-number">42131</span>     [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>t piix4_driver_exit    [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>r __func__.<span class="hljs-number">42149</span>       [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>r __func__.<span class="hljs-number">42117</span>       [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>r __func__.<span class="hljs-number">42132</span>       [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>r __func__.<span class="hljs-number">42095</span>       [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>r piix4_ids    [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>r __param_force_addr   [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>r __param_str_force_addr       [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>r __param_force        [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>r __param_str_force    [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>d __this_module        [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>r __mod_pci__piix4_ids_device_table    [i2c_piix4]<br><span class="hljs-symbol">0000000000000000 </span>t cleanup_module       [i2c_piix4]<br></code></pre></td></tr></table></figure>
+
+<p>root 用户查看 &#x2F;proc&#x2F;kallsyms 文件的部分输出信息如下：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">ffffffffc010c378</span> d descriptor.<span class="hljs-number">42136</span>    <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010c3b0</span> d descriptor.<span class="hljs-number">42131</span>    <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc01098c9</span> t piix4_driver_exit   <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010a7a0</span> r __func__.<span class="hljs-number">42149</span>      <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010a7c0</span> r __func__.<span class="hljs-number">42117</span>      <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010a7e0</span> r __func__.<span class="hljs-number">42132</span>      <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010a7f0</span> r __func__.<span class="hljs-number">42095</span>      <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010a800</span> r piix4_ids   <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010b120</span> r __param_force_addr  <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010b108</span> r __param_str_force_addr      <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010b148</span> r __param_force       <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010b113</span> r __param_str_force   <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010c500</span> d __this_module       <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc010a800</span> r __mod_pci__piix4_ids_device_table   <span class="hljs-meta"> [i2c_piix4]</span><br><span class="hljs-attribute">ffffffffc01098c9</span> t cleanup_module      <span class="hljs-meta"> [i2c_piix4]</span><br></code></pre></td></tr></table></figure>
+
+<p>可以看到，只有使用 root 用户来访问 &#x2F;proc&#x2F;kallsyms 时才能看到函数地址．</p>
+<h2 id="使用-root-权限执行-dropwatch-命令"><a href="#使用-root-权限执行-dropwatch-命令" class="headerlink" title="使用 root 权限执行 dropwatch 命令"></a>使用 root 权限执行 dropwatch 命令</h2><p>使用 root 权限执行 dropwatch 命令，记录信息如下：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">lcj</span>@debian:~/dropwatch-<span class="hljs-number">1</span>.<span class="hljs-number">5</span>.<span class="hljs-number">3</span>/src$ sudo ./dropwatch -l kas<br><span class="hljs-attribute">Initializing</span> kallsyms db<br><span class="hljs-attribute">dropwatch</span>&gt; start<br><span class="hljs-attribute">Enabling</span> monitoring...<br><span class="hljs-attribute">Kernel</span> monitoring activated.<br><span class="hljs-attribute">Issue</span> Ctrl-C to stop monitoring<br><span class="hljs-attribute">3</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">10</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">2</span> drops at __netif_receive_skb_core+<span class="hljs-number">13</span>f (<span class="hljs-number">0</span>xffffffff93fe192f)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">13</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">4</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">1</span> drops at __netif_receive_skb_core+<span class="hljs-number">13</span>f (<span class="hljs-number">0</span>xffffffff93fe192f)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">8</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">8</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">5</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">5</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">5</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">4</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">1</span> drops at __netif_receive_skb_core+<span class="hljs-number">13</span>f (<span class="hljs-number">0</span>xffffffff93fe192f)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">7</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">2</span> drops at __netif_receive_skb_core+<span class="hljs-number">13</span>f (<span class="hljs-number">0</span>xffffffff93fe192f)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">2</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">5</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">4</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">5</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">2</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">2</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">1</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">3</span> drops at __netif_receive_skb_core+<span class="hljs-number">13</span>f (<span class="hljs-number">0</span>xffffffff93fe192f)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">3</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">1</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">4</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">2</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">6</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">1</span> drops at __udp4_lib_rcv+a06 (<span class="hljs-number">0</span>xffffffff9406e5b6)<span class="hljs-meta"> [software]</span><br><span class="hljs-attribute">9</span> drops at ip_error+<span class="hljs-number">8</span>b (<span class="hljs-number">0</span>xffffffff9403171b)<span class="hljs-meta"> [software]</span><br></code></pre></td></tr></table></figure>
+
+<p>可以看到，函数地址转化为了具体的函数 + 地址偏移量的格式输出。这个信息每隔 1s 输出一次，或者在废弃的数据包数达到 64 时输出。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/linux/" class="category-chain-item">linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/" class="category-chain-item">网络开发</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E9%A9%B1%E5%8A%A8/" class="category-chain-item">驱动</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E9%A9%B1%E5%8A%A8/udev/" class="category-chain-item">udev</a>
+  
+  
+
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E7%BD%91%E7%BB%9C%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE%E6%A0%88/">#网络网络协议栈</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>dropwatch 监控内核的网络栈丢包</div>
+      <div>https://sisyphus1212.github.io/2020/11/01/network/debug/dropwatch_监控内核的网络栈丢包/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>sisyphus</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>November 1, 2020</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>Licensed under</div>
+        <div>
+          
+            
+            
+              <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/08/29/network/kernel%E7%BD%91%E7%BB%9C/%E5%8F%8C%E7%BD%91%E5%8D%A1%E7%9A%84bounding%E6%A8%A1%E5%BC%8F/" title="双网卡的bounding模式">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">双网卡的bounding模式</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2019/09/07/network/kernel%E7%BD%91%E7%BB%9C/iproute2%E4%BD%BF%E7%94%A8--nat%E7%BD%91%E6%A1%A5%E9%85%8D%E7%BD%AE/" title="iproute2使用--nat网桥配置">
+                        <span class="hidden-mobile">iproute2使用--nat网桥配置</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#comments', function() {
+      var light = 'github-light';
+      var dark = 'github-dark';
+      var schema = document.documentElement.getAttribute('data-user-color-scheme');
+      if (schema === 'dark') {
+        schema = dark;
+      } else {
+        schema = light;
+      }
+      window.UtterancesThemeLight = light;
+      window.UtterancesThemeDark = dark;
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'sisyphus1212/comments');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', schema);
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    })
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        被访:次数:
+        <span id="busuanzi_value_site_pv"></span>
+        
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        人数:
+        <span id="busuanzi_value_site_uv"></span>
+        
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+  <script>
+    var wechat_div = document.getElementById('wechat_show');
+    var wechatImg = document.getElementById("wechat_img");
+    wechat_click = document.getElementById('wechat_id');
+    wechat_click.onclick = function() {
+        wechat_div.style.display = "block";
+        wechatImg.src = "./img/wechat.png";
+    }
+    wechat_div.onclick = function() {
+        wechat_div.style.display = "none";
+    }
+</script>
+</body>
+</html>

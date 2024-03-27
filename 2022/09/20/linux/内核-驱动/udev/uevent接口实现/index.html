@@ -1,0 +1,861 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/go.jpg">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="sisyphus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="linux 内核 uevent 机制实现用户空间中 udev 的实现依赖于内核提供的设备信息,所有的硬件设备都属于硬件资源,哪怕是一个 GPIO,在操作系统的设计中,所有的硬件资源都应该由内核进行托管,当内核中的设备信息发生更新时,比如发生热插拔事件,内核需要通过某种通信方式来通知 udevd 守护进程,设备的状态已经被改变,需要及时地更新设备信息,增加&#x2F;删除&#x2F;修改某个硬件设备">
+<meta property="og:type" content="article">
+<meta property="og:title" content="uevent接口实现">
+<meta property="og:url" content="https://sisyphus1212.github.io/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/uevent%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0/index.html">
+<meta property="og:site_name" content="蚂蚁没问题">
+<meta property="og:description" content="linux 内核 uevent 机制实现用户空间中 udev 的实现依赖于内核提供的设备信息,所有的硬件设备都属于硬件资源,哪怕是一个 GPIO,在操作系统的设计中,所有的硬件资源都应该由内核进行托管,当内核中的设备信息发生更新时,比如发生热插拔事件,内核需要通过某种通信方式来通知 udevd 守护进程,设备的状态已经被改变,需要及时地更新设备信息,增加&#x2F;删除&#x2F;修改某个硬件设备">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-09-20-23-08-10.png?raw=true">
+<meta property="article:published_time" content="2022-09-20T16:04:04.000Z">
+<meta property="article:modified_time" content="2024-03-27T01:59:23.866Z">
+<meta property="article:author" content="sisyphus">
+<meta property="article:tag" content="kernel">
+<meta property="article:tag" content="netlink">
+<meta property="article:tag" content="linux驱动">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-09-20-23-08-10.png?raw=true">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>uevent接口实现 - 蚂蚁没问题</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"sisyphus1212.github.io","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":75,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<style>
+    .box_modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgba(94, 94, 94, 0.051);
+        /* Fallback color */
+        background-color: rgba(81, 81, 81, 0.032);
+        /* Black w/ opacity */
+    }
+
+    .box_modal_content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 150px;
+    }
+    /* 添加动画 */
+
+    .box_modal_content,
+    #caption {
+        -webkit-animation-name: zoom;
+        -webkit-animation-duration: 0.6s;
+        animation-name: zoom;
+        animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+        from {
+            -webkit-transform: scale(0)
+        }
+        to {
+            -webkit-transform: scale(1)
+        }
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+        to {
+            transform: scale(1)
+        }
+    }
+</style>
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>蚂蚁没问题</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于我
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/5.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="uevent接口实现"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-09-20 16:04" pubdate>
+          September 20, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          9.3k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          78 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+    <div id="wechat_show" class="box_modal" style="z-index: 999">
+        <!-- 弹窗内容 -->
+        <img class="box_modal_content" id="wechat_img">
+    </div>
+
+    <div id="sockial-link"  class="cover-social-link" style="color: var(--subtitle-color);--text-color: var(--navbar-text-color);z-index: 500;
+        position: absolute; transform: translateX(-50%); width: 200px; margin-top: -120px;
+    align-self: center; display: flex; justify-content: space-evenly; flex-wrap: nowrap; left: 50%;">
+        <a href="https://github.com/sisyphus1212/" class="tooltipped" target="_blank" data-tooltip="我的github" data-position="top" data-delay="50"> <i class="iconfont icon-github-fill"></i></a>
+        <a href="https://space.bilibili.com/228776952" class="tooltipped" target="_blank" data-tooltip="b站" data-position="top" data-delay="50"><i class="iconfont icon-bilibili-fill"></i> </a>
+        <a href="mailto:1250407709@qq.com" class="tooltipped" target="_blank" aria-label="1258407709@qq.com" data-position="top" data-delay="50"><i class="iconfont icon-mail"></i> </a>
+        <a id="wechat_id" class="tooltipped reward-link modal-trigger btn-medium waves-effect waves-light" data-tooltip="wechat" data-position="top" data-delay="50"><i class="iconfont icon-wechat-fill"></i> </a>
+        <a href="javascript:;" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50"><i class="iconfont icon-rss-fill"></i></a>
+    </div>
+  </header>
+
+  <main>
+    
+      
+<script> document.getElementById('sockial-link').style.display="none"</script>
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">uevent接口实现</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="linux-内核-uevent-机制实现"><a href="#linux-内核-uevent-机制实现" class="headerlink" title="linux 内核 uevent 机制实现"></a>linux 内核 uevent 机制实现</h2><p>用户空间中 udev 的实现依赖于内核提供的设备信息,所有的硬件设备都属于硬件资源,哪怕是一个 GPIO,在操作系统的设计中,所有的硬件资源都应该由内核进行托管,当内核中的设备信息发生更新时,比如发生热插拔事件,内核需要通过某种通信方式来通知 udevd 守护进程,设备的状态已经被改变,需要及时地更新设备信息,增加&#x2F;删除&#x2F;修改某个硬件设备对应的设备节点,将这种修改实时地反映到用户空间的设备节点上,以免用户在使用时因为更新不及时而产生一些错误.</p>
+<p>针对设备的动态管理,内核通过 uevent 机制实现,这种动态管理设备节点的机制底层原理是通过 kobject 对所有的设备进行组织,一旦发生设备的变动,同时也会反映在 kobject 结构中,驱动开发者可以选择将相应的变动信息通过内核提供的接口发送到用户空间,由 udevd 接收并处理,所以整个 uevent 机制的实现其实是内核与用户进程 udevd 之间的配合,而内核中的 uevent 实现和 kobject 是强相关的.</p>
+<h2 id="uevent-机制初始化"><a href="#uevent-机制初始化" class="headerlink" title="uevent 机制初始化"></a>uevent 机制初始化</h2><p>uevent 机制中,内核与用户空间的交互通过两种方式实现:</p>
+<ul>
+<li>使用 netlink 实现内核空间与用户空间的数据发送</li>
+<li>使用 call userhelper 的机制,内核直接调用用户空间的脚本,处理用户空间的设备节点</li>
+</ul>
+<p>netlink 通信的方式相对于 call userhelper 的方式来说,看起来是要麻烦一些,由内核直接调用用户空间脚本非常直观且容易实现,但是这种方式有一个非常大的问题就是开销大,调用用户脚本意味着创建一个新的进程,从这个角度来看,通过 netlink 发送数据到用户空间的效率要远远优于直接调用用户程序,尤其是当系统启动的时候,会产生大量的 uevent 调用.</p>
+<p>在内核的实现中,netlink 机制要更受欢迎,而对应的用户空间的接收程序为 udevd.</p>
+<p>uevent 的初始化在 lib&#x2F;kobject_uevent.c 中:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">uevent_net_init</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> net *net)</span></span><br><span class="hljs-function"></span>&#123;<br>	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">uevent_sock</span> *ue_sk;<br>	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">netlink_kernel_cfg</span> cfg = &#123;<br>        <span class="hljs-comment">/* 配置 netlink 组 */</span><br>		.groups	= <span class="hljs-number">1</span>,<br>		.flags	= NL_CFG_F_NONROOT_RECV,<br>	&#125;;<br><br>	ue_sk = <span class="hljs-built_in">kzalloc</span>(<span class="hljs-built_in">sizeof</span>(*ue_sk), GFP_KERNEL);<br>    <span class="hljs-comment">/* 创建并返回一个 netlink 套接字 */</span><br>	ue_sk-&gt;sk = <span class="hljs-built_in">netlink_kernel_create</span>(net, NETLINK_KOBJECT_UEVENT, &amp;cfg);<br>    <span class="hljs-comment">/* 链接到全局链表 */</span><br>    <span class="hljs-built_in">list_add_tail</span>(&amp;ue_sk-&gt;list, &amp;uevent_sock_list);<br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+<p>netlink 的初始化部分主要完成两个部分:</p>
+<ul>
+<li>申请并创建一个 netlink 套接字</li>
+<li>将返回的套接字句柄链接到全局链表 uevent_sock_list 中.</li>
+</ul>
+<p>内核中创建 netlink 套接字直接调用内核的接口即可,和用户空间的创建方式不一样,毕竟内核中并没有实现 glibc.</p>
+<h2 id="uevent-接口"><a href="#uevent-接口" class="headerlink" title="uevent 接口"></a>uevent 接口</h2><h3 id="相关数据结构"><a href="#相关数据结构" class="headerlink" title="相关数据结构"></a>相关数据结构</h3><p>在了解 uevent 接口之前,有必要先来看看 uevent 相关的数据结构:</p>
+<h4 id="kobj-uevent-env"><a href="#kobj-uevent-env" class="headerlink" title="kobj_uevent_env"></a>kobj_uevent_env</h4><p>struct kobj_uevent_env 用于描述 uevent 相关的信息,包括需要发送到用户空间的数据,参数等.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-keyword">struct</span> <span class="hljs-title class_">kobj_uevent_env</span> &#123;<br>    <span class="hljs-comment">/* 使用 call userhelper 方式的时候使用,用于保存执行脚本名以及参数 */</span><br>	<span class="hljs-type">char</span> *argv[<span class="hljs-number">3</span>];<br>    <span class="hljs-comment">/* 使用 netlink 机制时发送到用户空间的环境数据指针,指向 buf */</span><br>	<span class="hljs-type">char</span> *envp[UEVENT_NUM_ENVP];<br>    <span class="hljs-comment">/* 添加 envp item 时的索引值 */</span><br>	<span class="hljs-type">int</span> envp_idx;<br>    <span class="hljs-comment">/* 使用 netlink 机制时发送到用户空间的环境数据 */</span><br>	<span class="hljs-type">char</span> buf[UEVENT_BUFFER_SIZE];<br>    <span class="hljs-comment">/* buf 长度 */</span><br>	<span class="hljs-type">int</span> buflen;<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<h4 id="enum-kobject-action"><a href="#enum-kobject-action" class="headerlink" title="enum kobject_action"></a>enum kobject_action</h4><p>enum kobject_action 是一系列的枚举值,用于描述设备的变动类型:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-keyword">enum</span> <span class="hljs-title class_">kobject_action</span> &#123;<br>	KOBJ_ADD,     <span class="hljs-comment">//添加</span><br>	KOBJ_REMOVE,  <span class="hljs-comment">//移除</span><br>	KOBJ_CHANGE,  <span class="hljs-comment">//修改</span><br>	KOBJ_MOVE,    <span class="hljs-comment">//移动</span><br>	KOBJ_ONLINE,  <span class="hljs-comment">//上线</span><br>	KOBJ_OFFLINE, <span class="hljs-comment">//离线</span><br>	KOBJ_BIND,    <span class="hljs-comment">//绑定</span><br>	KOBJ_UNBIND,  <span class="hljs-comment">//解绑</span><br>	KOBJ_MAX      <span class="hljs-comment">//结束</span><br>&#125;;<br></code></pre></td></tr></table></figure>
+<h4 id="struct-kset-uevent-ops"><a href="#struct-kset-uevent-ops" class="headerlink" title="struct kset_uevent_ops"></a>struct kset_uevent_ops</h4><p>看到 ops 就知道这是一个回调函数集合,这个结构体被包含在 kset 中,因为 uevent 的上报由 kset 进行统一管理,在后文中我们继续讨论.</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-keyword">struct</span> <span class="hljs-title class_">kset_uevent_ops</span> &#123;<br>    <span class="hljs-comment">/* 过滤函数,决定当前 uevent 是否上报,该回调函数将在 uevent 上报时调用,如果返回 0 则不上报 */</span><br>	<span class="hljs-built_in">int</span> (* <span class="hljs-type">const</span> filter)(<span class="hljs-keyword">struct</span> kset *kset, <span class="hljs-keyword">struct</span> kobject *kobj);<br>	<span class="hljs-comment">/* name 的返回决定上报数据中的 subsystem 字段 */</span><br>    <span class="hljs-type">const</span> <span class="hljs-type">char</span> *(* <span class="hljs-type">const</span> name)(<span class="hljs-keyword">struct</span> kset *kset, <span class="hljs-keyword">struct</span> kobject *kobj);<br>    <span class="hljs-comment">/* 通过自定义的 uevent 回调函数可以添加一些自定义的上报数据 */</span><br>	<span class="hljs-built_in">int</span> (* <span class="hljs-type">const</span> uevent)(<span class="hljs-keyword">struct</span> kset *kset, <span class="hljs-keyword">struct</span> kobject *kobj,<br>		      <span class="hljs-keyword">struct</span> kobj_uevent_env *env);<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<h3 id="函数接口"><a href="#函数接口" class="headerlink" title="函数接口"></a>函数接口</h3><p>uevent 的接口比较简单,通常被用到的也就是两个接口:</p>
+<ul>
+<li>int kobject_uevent(struct kobject *kobj, enum kobject_action action)</li>
+<li>int kobject_uevent_env(struct kobject *kobj, enum kobject_action action,char *envp_ext[])</li>
+</ul>
+<p>实际上第一个接口直接调用第二个接口,将第 kobject_uevent_env 的第三个参数默认设置为 NULL.</p>
+<p>kobject_uevent_env 接受三个参数:</p>
+<ul>
+<li>kobj:发生变动设备对应的 kobject.</li>
+<li>action:修改的类型,ADD&#x2F;REMOVE&#x2F;CHANGE 等</li>
+<li>envp_ext:这是一个指针数据,也可以说是字符串数组,这个数组中所指向的所有字符串将会添加到发送内容中.</li>
+</ul>
+<p>了解了相关的数据结构,接下来自然就是来看看源代码实现,同样为了简洁起见,不重要的部分被删除:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><code class="hljs c++"><br><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">kobject_uevent_env</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> kobject *kobj, <span class="hljs-keyword">enum</span> kobject_action action,<span class="hljs-type">char</span> *envp_ext[])</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">kobj_uevent_env</span> *env;<br>    <span class="hljs-keyword">struct</span> <span class="hljs-title class_">kobject</span> *top_kobj;<br>	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">kset</span> *kset;<br>	<span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">kset_uevent_ops</span> *uevent_ops;<br><br>    <span class="hljs-comment">/* 如果当前 kobj-&gt;kset 没有设置,就向上找到 kobj-&gt;parent,再次检查是否 kset 被设置,直到找到一个可用的 kset</span><br><span class="hljs-comment">    ** 如果向上找不到所属的 kset,退出,函数执行终止并返回失败值.</span><br><span class="hljs-comment">    */</span><br>    top_kobj = kobj;<br>	<span class="hljs-keyword">while</span> (!top_kobj-&gt;kset &amp;&amp; top_kobj-&gt;parent)<br>		top_kobj = top_kobj-&gt;parent;<br>    <span class="hljs-keyword">if</span> (!top_kobj-&gt;kset) &#123;<br>        <span class="hljs-keyword">return</span> -EINVAL;<br>    &#125;<br>    <span class="hljs-comment">/* 取出 kset-&gt;uevent_ops 回调函数结构. */</span><br>    kset = top_kobj-&gt;kset;<br>	uevent_ops = kset-&gt;uevent_ops;<br><br>    <span class="hljs-comment">/* 如果当前 kobj 设置 kobj-&gt;uevent_suppress 为 true,表示不上传 ueven,返回. */</span><br>    <span class="hljs-keyword">if</span> (kobj-&gt;uevent_suppress) &#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>    &#125;<br>    <span class="hljs-comment">/* 执行 uevent-&gt;filter 回调函数,该回调函数由用户实现,用于过滤一些不需要上传的 uevent,当 filter 返回 0 时,表示不上传,返回 */</span><br>    <span class="hljs-keyword">if</span> (uevent_ops &amp;&amp; uevent_ops-&gt;filter)<br>		<span class="hljs-keyword">if</span> (!uevent_ops-&gt;<span class="hljs-built_in">filter</span>(kset, kobj)) &#123;<br>            <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>        &#125;<br><br>    <span class="hljs-comment">/* 获取 subsystem 名,这个 subsystem 名称正是需要传递到用户空间的 subsystem 的值</span><br><span class="hljs-comment">    ** 如果设置了 name 回调函数,将 uevent-&gt;name 的返回值作为 subsystem 的值.</span><br><span class="hljs-comment">    ** 如果每设置 name 回调函数,使用 kset-&gt;kobj-&gt;name 作为 subsystem 的值.</span><br><span class="hljs-comment">    */</span><br>    <span class="hljs-keyword">if</span> (uevent_ops &amp;&amp; uevent_ops-&gt;name)<br>		subsystem = uevent_ops-&gt;<span class="hljs-built_in">name</span>(kset, kobj);<br>	<span class="hljs-keyword">else</span><br>		subsystem = <span class="hljs-built_in">kobject_name</span>(&amp;kset-&gt;kobj);<br><br>    <span class="hljs-comment">/* 获取当前 kobject 在 sysfs 中的路径 */</span><br>    devpath = <span class="hljs-built_in">kobject_get_path</span>(kobj, GFP_KERNEL);<br><br>    <span class="hljs-comment">/* 将键值对填充到 env-&gt;buf 中,并使用 env-&gt;envp 指向对应的数据</span><br><span class="hljs-comment">    ** 并更新 env-&gt;buflen,env-&gt;envp_idx</span><br><span class="hljs-comment">    */</span><br>    retval = <span class="hljs-built_in">add_uevent_var</span>(env, <span class="hljs-string">&quot;ACTION=%s&quot;</span>, action_string);<br>	retval = <span class="hljs-built_in">add_uevent_var</span>(env, <span class="hljs-string">&quot;DEVPATH=%s&quot;</span>, devpath);<br>	retval = <span class="hljs-built_in">add_uevent_var</span>(env, <span class="hljs-string">&quot;SUBSYSTEM=%s&quot;</span>, subsystem);<br><br>    <span class="hljs-comment">/* 将传递进来的第三个参数 envp_ext 添加到 env-&gt;buf 中,用户可以自定义字符串消息内容 */</span><br>    <span class="hljs-keyword">if</span> (envp_ext) &#123;<br>		<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; envp_ext[i]; i++) &#123;<br>			retval = <span class="hljs-built_in">add_uevent_var</span>(env, <span class="hljs-string">&quot;%s&quot;</span>, envp_ext[i]);<br>		&#125;<br>	&#125;<br><br>    <span class="hljs-comment">/* 调用开发者传入的 uevent_ops-&gt;uevent 回调函数,允许开发者对 env 中的字符串消息进行修改 */</span><br>    <span class="hljs-keyword">if</span> (uevent_ops &amp;&amp; uevent_ops-&gt;uevent) &#123;<br>		retval = uevent_ops-&gt;<span class="hljs-built_in">uevent</span>(kset, kobj, env);<br>	&#125;<br>    <span class="hljs-comment">/* 添加一个上报序列号 */</span><br>    <span class="hljs-built_in">add_uevent_var</span>(env, <span class="hljs-string">&quot;SEQNUM=%llu&quot;</span>, (<span class="hljs-type">unsigned</span> <span class="hljs-type">long</span> <span class="hljs-type">long</span>)++uevent_seqnum);<br><br>    ...<br><br>&#125;<br></code></pre></td></tr></table></figure>
+<p>kobject_uevent_env 的前半部分主要是一些准备工作,分为两个部分:</p>
+<ul>
+<li>找到当前 kobject 对应的 kset,获取 uevent_ops 结构.</li>
+<li>检查 kobject-&gt;uevent_suppress 和 uevent_ops-&gt;filter,确定当前 uevent 是否被屏蔽,如果是,则返回.</li>
+<li>将需要发送到用户空间的字符串以键值对的方式组织起来,保存在 struct kobj_uevent_env 类型的 env 结构中.</li>
+</ul>
+<p>需要发送到用户空间的字符串消息已经准备完毕,接下来就是发送到用户空间的工作.</p>
+<p>分为两种方式:netlink 发送,和 call_userhelper.由内核宏进行控制,先看 netlink 方式的源码实现:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-comment">/* netlink 上报方式是否支持由内核宏 CONFIG_NET 控制. */</span><br><span class="hljs-meta">#<span class="hljs-keyword">if</span> defined(CONFIG_NET)</span><br>    <span class="hljs-comment">/* 遍历全局链表 uevent_sock_list, 其中保存的是 netlink 初始化时返回的 sock. */</span><br>	<span class="hljs-built_in">list_for_each_entry</span>(ue_sk, &amp;uevent_sock_list, list) &#123;<br>		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">sock</span> *uevent_sock = ue_sk-&gt;sk;<br>		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">sk_buff</span> *skb;<br>		<span class="hljs-type">size_t</span> len;<br>        <span class="hljs-comment">/* 检查当前的 sock 是否有监听者,如果没有,就不使用这个 sock */</span><br>		<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">netlink_has_listeners</span>(uevent_sock, <span class="hljs-number">1</span>))<br>			<span class="hljs-keyword">continue</span>;<br><br>        <span class="hljs-comment">/* 申请并填充一个 skb 结构,在内核中, netlink 的数据交互是通过 skb 结构完成的. */</span><br>		len = <span class="hljs-built_in">strlen</span>(action_string) + <span class="hljs-built_in">strlen</span>(devpath) + <span class="hljs-number">2</span>;<br>		skb = <span class="hljs-built_in">alloc_skb</span>(len + env-&gt;buflen, GFP_KERNEL);<br>		<span class="hljs-keyword">if</span> (skb) &#123;<br>			<span class="hljs-type">char</span> *scratch;<br><br>			scratch = <span class="hljs-built_in">skb_put</span>(skb, len);<br>			<span class="hljs-built_in">sprintf</span>(scratch, <span class="hljs-string">&quot;%s@%s&quot;</span>, action_string, devpath);<br>            <span class="hljs-comment">/* 将上述准备好的数据一一拷贝到 skb 中 */</span><br>			<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; env-&gt;envp_idx; i++) &#123;<br>				len = <span class="hljs-built_in">strlen</span>(env-&gt;envp[i]) + <span class="hljs-number">1</span>;<br>				scratch = <span class="hljs-built_in">skb_put</span>(skb, len);<br>				<span class="hljs-built_in">strcpy</span>(scratch, env-&gt;envp[i]);<br>			&#125;<br><br>			<span class="hljs-built_in">NETLINK_CB</span>(skb).dst_group = <span class="hljs-number">1</span>;<br>            <span class="hljs-comment">/* 将 skb 中的数据通过 netlink 进行广播 */</span><br>			retval = <span class="hljs-built_in">netlink_broadcast_filtered</span>(uevent_sock, skb,<span class="hljs-number">0</span>, <span class="hljs-number">1</span>, GFP_KERNEL,kobj_bcast_filter,kobj);<br>	&#125;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br></code></pre></td></tr></table></figure>
+
+<p>对于 netlink 的发送,基本上就是调用内核的接口,使用比较简单,本章不对 netlink 的实现机制作详细讨论,关于 netlink 的使用可以参考我的另一篇博客:TODO.</p>
+<p>接下来我们来看看 call_userhelper 的实现方式:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-comment">/* call userhelper 的方式是否支持由内核宏 CONFIG_UEVENT_HELPER 控制 */</span><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_UEVENT_HELPER</span><br>	<span class="hljs-comment">/* uevent_helper 中保存的是用户空间的脚本路径名,为空表示没有设置用户空间脚本,自然不会执行.</span><br><span class="hljs-comment">    */</span><br>	<span class="hljs-keyword">if</span> (uevent_helper[<span class="hljs-number">0</span>] &amp;&amp; !<span class="hljs-built_in">kobj_usermode_filter</span>(kobj)) &#123;<br>		<span class="hljs-keyword">struct</span> <span class="hljs-title class_">subprocess_info</span> *info;<br>        <span class="hljs-comment">/* 添加一系列环境参数 */</span><br>		retval = <span class="hljs-built_in">add_uevent_var</span>(env, <span class="hljs-string">&quot;HOME=/&quot;</span>);<br>		retval = <span class="hljs-built_in">add_uevent_var</span>(env,<br>					<span class="hljs-string">&quot;PATH=/sbin:/bin:/usr/sbin:/usr/bin&quot;</span>);<br><br>        <span class="hljs-comment">/* 初始化 env-&gt;argv 参数:</span><br><span class="hljs-comment">        ** env-&gt;argv[0] = uevent_helper  //保存带路径的脚本名</span><br><span class="hljs-comment">        ** env-&gt;argv[1] = &amp;env-&gt;buf[env-&gt;buflen];  //指向 env 参数</span><br><span class="hljs-comment">        ** env-&gt;argv[1] = NULL</span><br><span class="hljs-comment">        */</span><br>		retval = <span class="hljs-built_in">init_uevent_argv</span>(env, subsystem);<br><br>        <span class="hljs-comment">// 初始化 call userhelper</span><br>		info = <span class="hljs-built_in">call_usermodehelper_setup</span>(env-&gt;argv[<span class="hljs-number">0</span>], env-&gt;argv,env-&gt;envp, GFP_KERNEL,<span class="hljs-literal">NULL</span>, cleanup_uevent_env, env);<br><br>        <span class="hljs-comment">/* 执行调用 */</span><br>        retval = <span class="hljs-built_in">call_usermodehelper_exec</span>(info, UMH_NO_WAIT);<br>	&#125;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br><br></code></pre></td></tr></table></figure>
+
+<p>关键的处理在于 call userhelper 的初始化和执行调用中,</p>
+<p>初始化部分:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-keyword">struct</span> <span class="hljs-title class_">subprocess_info</span> *<span class="hljs-built_in">call_usermodehelper_setup</span>(<span class="hljs-type">const</span> <span class="hljs-type">char</span> *path, <span class="hljs-type">char</span> **argv,<br>		<span class="hljs-type">char</span> **envp, <span class="hljs-type">gfp_t</span> gfp_mask,<br>		<span class="hljs-built_in">int</span> (*init)(<span class="hljs-keyword">struct</span> subprocess_info *info, <span class="hljs-keyword">struct</span> cred *<span class="hljs-keyword">new</span>),<br>		<span class="hljs-built_in">void</span> (*cleanup)(<span class="hljs-keyword">struct</span> subprocess_info *info),<br>		<span class="hljs-type">void</span> *data)<br>&#123;<br>	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">subprocess_info</span> *sub_info;<br>	sub_info = <span class="hljs-built_in">kzalloc</span>(<span class="hljs-built_in">sizeof</span>(<span class="hljs-keyword">struct</span> subprocess_info), gfp_mask);<br>	<span class="hljs-keyword">if</span> (!sub_info)<br>		<span class="hljs-keyword">goto</span> out;<br><br>    <span class="hljs-comment">/* 初始化一个 work 结构,用于工作队列 */</span><br>	<span class="hljs-built_in">INIT_WORK</span>(&amp;sub_info-&gt;work, call_usermodehelper_exec_work);<br><br><span class="hljs-comment">/* 如果内核配置了 CONFIG_STATIC_USERMODEHELPER,就使用内核配置中 CONFIG_STATIC_USERMODEHELPER_PATH 的路径</span><br><span class="hljs-comment">** 不可自行配置</span><br><span class="hljs-comment">*/</span><br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> CONFIG_STATIC_USERMODEHELPER</span><br>	sub_info-&gt;path = CONFIG_STATIC_USERMODEHELPER_PATH;<br><span class="hljs-meta">#<span class="hljs-keyword">else</span></span><br>	sub_info-&gt;path = path;<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>	sub_info-&gt;argv = argv;<br>	sub_info-&gt;envp = envp;<br><br>	sub_info-&gt;cleanup = cleanup;<br>	sub_info-&gt;init = init;<br>	sub_info-&gt;data = data;<br>  out:<br>	<span class="hljs-keyword">return</span> sub_info;<br>&#125;<br><br></code></pre></td></tr></table></figure>
+<p>初始化部分比较简单,主要有两个部分:</p>
+<ul>
+<li>初始化一个 work,回调函数为 call_usermodehelper_exec_work,不难猜到,后续执行该 call userhelper时,就是执行该 work 实现相应的功能</li>
+<li>构建一个 sub_info 结构,并通过传递进来的参数填充它,包括 环境参数 envp,执行路径 path 等.</li>
+</ul>
+<p>执行调用为 call_usermodehelper_exec:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">call_usermodehelper_exec</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> subprocess_info *sub_info, <span class="hljs-type">int</span> wait)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-comment">/* 初始化一个 wait 事件 */</span><br>    sub_info-&gt;complete = (wait == UMH_NO_WAIT) ? <span class="hljs-literal">NULL</span> : &amp;done;<br>	sub_info-&gt;wait = wait;<br><br>    <span class="hljs-comment">/* 将工作推入到工作队列, */</span><br>	<span class="hljs-built_in">queue_work</span>(system_unbound_wq, &amp;sub_info-&gt;work);<br>    <span class="hljs-comment">/* 当前进程进入睡眠,等待执行完成 */</span><br>    retval = <span class="hljs-built_in">wait_for_completion_killable</span>(&amp;done);<br>    <span class="hljs-built_in">wait_for_completion</span>(&amp;done);<br>    ...<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>执行调用主要包含两个操作:</p>
+<ul>
+<li>将初始化部分定义的工作加入到待执行工作队列,该工作将在不久的将来被执行,工作的回调函数 call_usermodehelper_exec_work 将被调用</li>
+<li>进程进入睡眠,等待执行完成.</li>
+</ul>
+<p>在工作的回调函数 call_usermodehelper_exec_work 中, 调用了 do_fork 和 do_execve,这和用户空间调用 fork 和 exec 函数族类似,只是用户空间调用还需要触发系统调用间接地调用到 do_fork 和 do_execve,关于进程的创建与执行这里就不再过多讨论了.</p>
+<p>call userhelper 的方式执行 uevent 是比较少见的,尽管在很多平台上,call userhelper 机制是默认使能的,但是它是否被执行取决于一些内核配置:</p>
+<ul>
+<li>CONFIG_UEVENT_HELPER:如果这个宏没有被使能,整个 call userhelper 机制被禁止.</li>
+<li>CONFIG_UEVENT_HELPER_PATH:这个宏是一个带路径的文件名,表示默认的用户空间脚本.通常是 &#x2F;sbin&#x2F;hotplug 或者为空.</li>
+<li>CONFIG_STATIC_USERMODEHELPER:如果这个内核选项被配置,表示使用内核编译时指定的脚本,同时需要配置 CONFIG_STATIC_USERMODEHELPER_PATH ,这个宏就是带路径的脚本名,这种静态配置不再接受用户的配置,除非特殊情况才会使用,因为在系统的启动阶段,会产生大量的 uevent,如果每个 uevent 都要创建一个进程执行,会导致启动过程非常缓慢,甚至有系统资源耗尽的风险.一般来说,即使使用 call userhelper 的机制处理 uevent,在系统启动阶段不会使能,而是在系统起来之后动态地进行配置.</li>
+<li>可以通过读写 &#x2F;sys&#x2F;kernel&#x2F;uevent_helper 的方式动态地指定用户空间的 call userhelper 脚本.该文件接口的内核实现在 kernel&#x2F;ksysfs.c 中.</li>
+</ul>
+<p>如果你对系统调用过程和程序加载过程有兴趣的话,可以参考这一些博客:TODO TODO.</p>
+<p>内核中 uevent 的处理就到此结束了,内核通过 netlink 将信息发到用户空间,那么用户空间是怎么接收并处理的呢?在后面的文章中我们将继续讨论udev 的实现.</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/linux/" class="category-chain-item">linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/" class="category-chain-item">网络开发</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E9%A9%B1%E5%8A%A8/" class="category-chain-item">驱动</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E9%A9%B1%E5%8A%A8/udev/" class="category-chain-item">udev</a>
+  
+  
+
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/kernel/">#kernel</a>
+      
+        <a href="/tags/netlink/">#netlink</a>
+      
+        <a href="/tags/linux%E9%A9%B1%E5%8A%A8/">#linux驱动</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>uevent接口实现</div>
+      <div>https://sisyphus1212.github.io/2022/09/20/linux/内核-驱动/udev/uevent接口实现/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>sisyphus</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>September 20, 2022</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>Licensed under</div>
+        <div>
+          
+            
+            
+              <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/11/04/network/ethtool/ethtool_%E7%9A%84%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/" title="ethtool_的工作原理">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">ethtool_的工作原理</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/09/20/network/base_knowledge/tun%20%E4%B8%8E%20tap%20%E8%AE%BE%E5%A4%87%EF%BC%8C%E7%BD%91%E6%A1%A5%E3%80%81VLAN%E3%80%81bonding%20%E7%9A%84%E5%AD%A6%E4%B9%A0/" title="linux内核网络设备">
+                        <span class="hidden-mobile">linux内核网络设备</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#comments', function() {
+      var light = 'github-light';
+      var dark = 'github-dark';
+      var schema = document.documentElement.getAttribute('data-user-color-scheme');
+      if (schema === 'dark') {
+        schema = dark;
+      } else {
+        schema = light;
+      }
+      window.UtterancesThemeLight = light;
+      window.UtterancesThemeDark = dark;
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'sisyphus1212/comments');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', schema);
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    })
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        被访:次数:
+        <span id="busuanzi_value_site_pv"></span>
+        
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        人数:
+        <span id="busuanzi_value_site_uv"></span>
+        
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+  <script>
+    var wechat_div = document.getElementById('wechat_show');
+    var wechatImg = document.getElementById("wechat_img");
+    wechat_click = document.getElementById('wechat_id');
+    wechat_click.onclick = function() {
+        wechat_div.style.display = "block";
+        wechatImg.src = "./img/wechat.png";
+    }
+    wechat_div.onclick = function() {
+        wechat_div.style.display = "none";
+    }
+</script>
+</body>
+</html>

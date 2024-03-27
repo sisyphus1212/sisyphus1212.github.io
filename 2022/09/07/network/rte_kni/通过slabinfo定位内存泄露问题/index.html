@@ -1,0 +1,831 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/go.jpg">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="sisyphus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="dpdk-16.04 rte_kni 模块与内核内存泄露问题问题描述某设备运行 dpdk 程序，free 的内存空间在逐渐下降。 第一次查看： 1234[root]# free -htotal        used        free      shared  buff&#x2F;cache   availableMem:           3.6G        1.5G        425M">
+<meta property="og:type" content="article">
+<meta property="og:title" content="dpdk 程序创建 kni 虚拟网络接口失败的问题">
+<meta property="og:url" content="https://sisyphus1212.github.io/2022/09/07/network/rte_kni/%E9%80%9A%E8%BF%87slabinfo%E5%AE%9A%E4%BD%8D%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98/index.html">
+<meta property="og:site_name" content="蚂蚁没问题">
+<meta property="og:description" content="dpdk-16.04 rte_kni 模块与内核内存泄露问题问题描述某设备运行 dpdk 程序，free 的内存空间在逐渐下降。 第一次查看： 1234[root]# free -htotal        used        free      shared  buff&#x2F;cache   availableMem:           3.6G        1.5G        425M">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-09-07T16:04:02.000Z">
+<meta property="article:modified_time" content="2024-03-27T01:59:23.862Z">
+<meta property="article:author" content="sisyphus">
+<meta property="article:tag" content="linux">
+<meta property="article:tag" content="网卡驱动">
+<meta property="article:tag" content="kernel">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>dpdk 程序创建 kni 虚拟网络接口失败的问题 - 蚂蚁没问题</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"sisyphus1212.github.io","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":75,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<style>
+    .box_modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgba(94, 94, 94, 0.051);
+        /* Fallback color */
+        background-color: rgba(81, 81, 81, 0.032);
+        /* Black w/ opacity */
+    }
+
+    .box_modal_content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 150px;
+    }
+    /* 添加动画 */
+
+    .box_modal_content,
+    #caption {
+        -webkit-animation-name: zoom;
+        -webkit-animation-duration: 0.6s;
+        animation-name: zoom;
+        animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+        from {
+            -webkit-transform: scale(0)
+        }
+        to {
+            -webkit-transform: scale(1)
+        }
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+        to {
+            transform: scale(1)
+        }
+    }
+</style>
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>蚂蚁没问题</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于我
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/5.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="dpdk 程序创建 kni 虚拟网络接口失败的问题"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-09-07 16:04" pubdate>
+          September 7, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          8.2k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          69 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+    <div id="wechat_show" class="box_modal" style="z-index: 999">
+        <!-- 弹窗内容 -->
+        <img class="box_modal_content" id="wechat_img">
+    </div>
+
+    <div id="sockial-link"  class="cover-social-link" style="color: var(--subtitle-color);--text-color: var(--navbar-text-color);z-index: 500;
+        position: absolute; transform: translateX(-50%); width: 200px; margin-top: -120px;
+    align-self: center; display: flex; justify-content: space-evenly; flex-wrap: nowrap; left: 50%;">
+        <a href="https://github.com/sisyphus1212/" class="tooltipped" target="_blank" data-tooltip="我的github" data-position="top" data-delay="50"> <i class="iconfont icon-github-fill"></i></a>
+        <a href="https://space.bilibili.com/228776952" class="tooltipped" target="_blank" data-tooltip="b站" data-position="top" data-delay="50"><i class="iconfont icon-bilibili-fill"></i> </a>
+        <a href="mailto:1250407709@qq.com" class="tooltipped" target="_blank" aria-label="1258407709@qq.com" data-position="top" data-delay="50"><i class="iconfont icon-mail"></i> </a>
+        <a id="wechat_id" class="tooltipped reward-link modal-trigger btn-medium waves-effect waves-light" data-tooltip="wechat" data-position="top" data-delay="50"><i class="iconfont icon-wechat-fill"></i> </a>
+        <a href="javascript:;" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50"><i class="iconfont icon-rss-fill"></i></a>
+    </div>
+  </header>
+
+  <main>
+    
+      
+<script> document.getElementById('sockial-link').style.display="none"</script>
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">dpdk 程序创建 kni 虚拟网络接口失败的问题</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="dpdk-16-04-rte-kni-模块与内核内存泄露问题"><a href="#dpdk-16-04-rte-kni-模块与内核内存泄露问题" class="headerlink" title="dpdk-16.04 rte_kni 模块与内核内存泄露问题"></a>dpdk-16.04 rte_kni 模块与内核内存泄露问题</h1><h1 id="问题描述"><a href="#问题描述" class="headerlink" title="问题描述"></a>问题描述</h1><p>某设备运行 dpdk 程序，free 的内存空间在逐渐下降。</p>
+<p>第一次查看：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs bash">[root]<span class="hljs-comment"># free -h</span><br>total        used        free      shared  buff/cache   available<br>Mem:           3.6G        1.5G        425M        403M        1.7G        534M<br>Swap:            0B          0B          0B<br></code></pre></td></tr></table></figure>
+
+<p>几分钟后查看：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs bash">[root]<span class="hljs-comment"># free -h</span><br>total        used        free      shared  buff/cache   available<br>Mem:           3.6G        1.2G        425M        403M        1.4G        534M<br>Swap:            0B          0B          0B<br></code></pre></td></tr></table></figure>
+
+<p>持续观察确定 free 的内存在【持续降低】。</p>
+<h1 id="问题定位过程"><a href="#问题定位过程" class="headerlink" title="问题定位过程"></a>问题定位过程</h1><ol>
+<li>使用 top 查看用户态程序的占用的内存空间，未发现明显异常</li>
+<li>执行 echo 3 &gt; &#x2F;proc&#x2F;sys&#x2F;vm&#x2F;drop_caches 清除缓存，free 的空间仍旧没有增加</li>
+<li>观察 &#x2F;proc&#x2F;slabinfo 发现 kmalloc-8192 这种类型的 slab 空间一直在增加</li>
+</ol>
+<p>第一次查看：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">kmalloc-8192      128016 128016   8192    4    8 : tunables    0    0    0 : slabdata  32004  32004      0<br></code></pre></td></tr></table></figure>
+
+<p>几分钟后查看：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">kmalloc-8192 135760 135760 8192 4 8 : tunables 0 0 0 : slabdata 33940 33940 0<br></code></pre></td></tr></table></figure>
+
+<p>怀疑就是 kmalloc-8192 导致的问题。</p>
+<h1 id="跟踪-kmalloc-8192-的-alloc-与-free-过程"><a href="#跟踪-kmalloc-8192-的-alloc-与-free-过程" class="headerlink" title="跟踪 kmalloc-8192 的 alloc 与 free 过程"></a>跟踪 kmalloc-8192 的 alloc 与 free 过程</h1><p>执行如下命令开启内核 kmalloc-8192 类 slab 对象的 <strong>trace</strong> 功能：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-built_in">echo</span> 1 &gt; /sys/kernel/slab/kmalloc-8192/trace<br></code></pre></td></tr></table></figure>
+
+<p>几十秒后查看 dmesg 信息，看到如下内容：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><code class="hljs bash"><br>[90556.444309] TRACE kmalloc-8192 alloc 0xffff88001a0d8000 inuse=4 fp=0x          (null)<br>.........<br>[90556.444342] Call Trace:<br>[90556.444355]  [&lt;ffffffff826cbd7c&gt;] dump_stack+0x63/0x7f<br>[90556.444362]  [&lt;ffffffff826ca454&gt;] alloc_debug_processing+0xb1/0x105<br>[90556.444368]  [&lt;ffffffff826ca84a&gt;] __slab_alloc+0x3a2/0x40f<br>[90556.444375]  [&lt;ffffffff825a7d4c&gt;] ? kzalloc+0xf/0x11<br>[90556.444383]  [&lt;ffffffff826d3792&gt;] ? _raw_spin_unlock_irqrestore+0x1a/0x2d<br>[90556.444389]  [&lt;ffffffff8258eb55&gt;] ? pci_conf1_read+0xdb/0xf3<br>[90556.444394]  [&lt;ffffffff825a7d4c&gt;] ? kzalloc+0xf/0x11<br>[90556.444401]  [&lt;ffffffff82139fad&gt;] __kmalloc+0xf5/0x156<br>[90556.444409]  [&lt;ffffffff825c4f0b&gt;] ? eth_mac_addr+0x28/0x28<br>[90556.444413]  [&lt;ffffffff825a7d4c&gt;] kzalloc+0xf/0x11<br>[90556.444419]  [&lt;ffffffff825ae850&gt;] alloc_netdev_mqs+0x80/0x2d9<br>[90556.444425]  [&lt;ffffffff825c5075&gt;] alloc_etherdev_mqs+0x1c/0x1e<br>[90556.444463]  [&lt;ffffffffa0058840&gt;] igb_kni_probe+0x64/0xa56 [rte_kni]<br>[90556.444471]  [&lt;ffffffff82402fdf&gt;] ? put_device+0x12/0x14<br>[90556.444478]  [&lt;ffffffff82305dda&gt;] ? pci_get_dev_by_id+0x71/0x79<br>[90556.444483]  [&lt;ffffffff82305e16&gt;] ? pci_get_subsys+0x34/0x3b<br>[90556.444507]  [&lt;ffffffffa003567e&gt;] kni_ioctl_create+0x32d/0x5a1 [rte_kni]<br>[90556.444531]  [&lt;ffffffffa0035924&gt;] kni_ioctl+0x32/0x3b [rte_kni]<br>[90556.444539]  [&lt;ffffffff82156a05&gt;] do_vfs_ioctl+0x351/0x415<br>[90556.444546]  [&lt;ffffffff8215e905&gt;] ? __fget+0x66/0x70<br>[90556.444552]  [&lt;ffffffff82156b14&gt;] SyS_ioctl+0x4b/0x76<br>[90556.444558]  [&lt;ffffffff826d3f89&gt;] system_call_fastpath+0x16/0x1b<br></code></pre></td></tr></table></figure>
+
+<p>上面的信息表明此处的 alloc 是在 kni 接口初始化时执行的。同时也看到了其它模块的打印，reiserfs 的一个打印信息如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><code class="hljs bash">90560.232045] TRACE kmalloc-8192 alloc 0xffff88001a0da000 inuse=4 fp=0x          (null)<br>.........<br>[90560.232083] Call Trace:<br>[90560.232096]  [&lt;ffffffff826cbd7c&gt;] dump_stack+0x63/0x7f<br>[90560.232103]  [&lt;ffffffff826ca454&gt;] alloc_debug_processing+0xb1/0x105<br>[90560.232109]  [&lt;ffffffff826ca84a&gt;] __slab_alloc+0x3a2/0x40f<br>[90560.232117]  [&lt;ffffffff821adca2&gt;] ? fix_nodes+0x188/0x1b1d<br>[90560.232124]  [&lt;ffffffff8216bb01&gt;] ? touch_buffer+0xd/0xf<br>[90560.232130]  [&lt;ffffffff8216c4eb&gt;] ? __find_get_block+0x1e5/0x1f7<br>[90560.232136]  [&lt;ffffffff821adca2&gt;] ? fix_nodes+0x188/0x1b1d<br>[90560.232143]  [&lt;ffffffff82139fad&gt;] __kmalloc+0xf5/0x156<br>[90560.232149]  [&lt;ffffffff821adca2&gt;] fix_nodes+0x188/0x1b1d<br>[90560.232156]  [&lt;ffffffff8210b43b&gt;] ? mark_page_accessed+0xf/0xc5<br>[90560.232161]  [&lt;ffffffff8216bb01&gt;] ? touch_buffer+0xd/0xf<br>[90560.232167]  [&lt;ffffffff8210b43b&gt;] ? mark_page_accessed+0xf/0xc5<br>[90560.232172]  [&lt;ffffffff8216bb01&gt;] ? touch_buffer+0xd/0xf<br>[90560.232178]  [&lt;ffffffff821bdd39&gt;] ? journal_mark_dirty+0x62/0x25f<br>[90560.232185]  [&lt;ffffffff821b95f1&gt;] reiserfs_insert_item+0x1ba/0x247<br>[90560.232196]  [&lt;ffffffff821b1675&gt;] add_save_link+0x170/0x1b8<br>[90560.232202]  [&lt;ffffffff826d1ccf&gt;] ? mutex_unlock+0x11/0x13<br>[90560.232209]  [&lt;ffffffff821a8a2b&gt;] reiserfs_truncate_file+0x197/0x278<br>[90560.232215]  [&lt;ffffffff8210c341&gt;] ? truncate_pagecache+0x4d/0x54<br>[90560.232221]  [&lt;ffffffff821abc4a&gt;] reiserfs_setattr+0x2e2/0x311<br>[90560.232228]  [&lt;ffffffff8218c405&gt;] ? __dquot_initialize+0x20/0x14c<br>[90560.232236]  [&lt;ffffffff820ac766&gt;] ? preempt_count_add+0x75/0x88<br>[90560.232241]  [&lt;ffffffff820ac6c2&gt;] ? get_parent_ip+0xd/0x3c<br>[90560.232248]  [&lt;ffffffff8215e092&gt;] notify_change+0x1e2/0x2c6<br>[90560.232255]  [&lt;ffffffff82147096&gt;] do_truncate+0x64/0x89<br>[90560.232262]  [&lt;ffffffff82153f2c&gt;] do_last.isra.46+0x976/0x9a5<br>[90560.232269]  [&lt;ffffffff82154172&gt;] path_openat+0x217/0x4ab<br>[90560.232275]  [&lt;ffffffff8215547d&gt;] do_filp_open+0x35/0x7a<br>[90560.232281]  [&lt;ffffffff826d3765&gt;] ? _raw_spin_unlock+0x12/0x25<br>[90560.232287]  [&lt;ffffffff8215ee1f&gt;] ? __alloc_fd+0xe5/0xf4<br>[90560.232293]  [&lt;ffffffff8214830f&gt;] do_sys_open+0x6b/0xfa<br>[90560.232298]  [&lt;ffffffff821483b7&gt;] SyS_open+0x19/0x1b<br>[90560.232303]  [&lt;ffffffff826d3f89&gt;] system_call_fastpath+0x16/0x1b<br>[90560.232321] TRACE kmalloc-8192 free 0xffff88001a0da000 inuse=3 fp=0xffff88001a0dc000<br></code></pre></td></tr></table></figure>
+
+<p>它与 kni 模块 alloc 空间打印的堆栈信息的区别在于最后一行，即 TRACE **kmalloc-8192 free 0xffff88001a0da000 …….**，此行表明【释放】了 8192 大小的空间，而 kni 模块的打印中没有释放的打印，表明只在创建。</p>
+<h1 id="为什么-kni-模块在一直创建-netdev-呢？"><a href="#为什么-kni-模块在一直创建-netdev-呢？" class="headerlink" title="为什么 kni 模块在一直创建 netdev 呢？"></a>为什么 kni 模块在一直创建 netdev 呢？</h1><p>使用 kni 模块的程序只在【初始化】的过程中才会创建 netdev，程序死亡后 netdev 会释放，那上面说的没有释放是否是因为程序一直在运行？</p>
+<p>查看程序状态发现，程序竟然在一直重启，同时 kmalloc-8192 的数量在以固定的数目缓慢增长，重命名程序后不再增长，<strong>能够确定是 rte_kni 内部模块存在内存泄露问题</strong>。</p>
+<h1 id="rte-kni-ko-代码分析"><a href="#rte-kni-ko-代码分析" class="headerlink" title="rte_kni.ko 代码分析"></a>rte_kni.ko 代码分析</h1><p>阅读 rte_kni.ko 源码发现，在 <strong>igb_kni_probe</strong> 函数中会调用 <strong>alloc_etherdev_mq</strong> 创建一个 <strong>netdev</strong>，此外 <strong>kni_ioctl_create</strong> 中也会创建一个 <strong>netdev</strong>，而在【释放】逻辑中，<strong>kni_dev_remove</strong> 中只释放了 <strong>kni_ioctl_create</strong>  中创建的 <strong>netdev</strong>，【没有释放】 e1000、igb、ixgbe xxx_kni_probe 中创建的 netdev 结构，导致内存泄露。</p>
+<h1 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h1><p>在 e1000、igb、ixgbe 的 xxx_kni_probe 中创建的 netdev 结构会被填充到 kni_dev 结构的 <strong>lad_dev</strong> 字段中，只需要在 kni_dev_remove 函数中判断 lad_dev 字段是否为空，不为空则调用 free_netdev 释放即可。</p>
+<p>修改后的 kni_dev_remove 函数代码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">int</span><br><span class="hljs-title function_">kni_dev_remove</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> kni_dev *dev)</span><br>&#123;<br>	<span class="hljs-keyword">if</span> (!dev)<br>		<span class="hljs-keyword">return</span> -ENODEV;<br>	.........<br>	<span class="hljs-keyword">if</span> (dev-&gt;lad_dev) &#123;<br>		free_netdev(dev-&gt;lad_dev);<br>	&#125;<br><br>	<span class="hljs-keyword">if</span> (dev-&gt;net_dev) &#123;<br>		unregister_netdev(dev-&gt;net_dev);<br>		free_netdev(dev-&gt;net_dev);<br>	&#125;<br><br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h1 id="验证方案"><a href="#验证方案" class="headerlink" title="验证方案"></a>验证方案</h1><p>使用 <strong>ftrace</strong> 跟踪<strong>内核函数调用</strong>来验证修改有效，使用 ftrace 跟踪 kni 程序初始化时调用 alloc_netdev_mqs 以及死亡时调用 free_netdev 的过程来验证问题得到解决。</p>
+<p>kni 程序运行命令如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">[root]<span class="hljs-comment"># ./kni  -- -p0x3 --config=&quot;(0,0,1),(1,1,1)&quot;</span><br></code></pre></td></tr></table></figure>
+
+<p>ftrace 跟踪到 alloc_netdev_mqs 函数调用情况如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-comment"># tracer: function</span><br><span class="hljs-comment">#</span><br><span class="hljs-comment"># entries-in-buffer/entries-written: 4/4   #P:4</span><br><span class="hljs-comment">#</span><br><span class="hljs-comment">#                              _-----=&gt; irqs-off</span><br><span class="hljs-comment">#                             / _----=&gt; need-resched</span><br><span class="hljs-comment">#                            | / _---=&gt; hardirq/softirq</span><br><span class="hljs-comment">#                            || / _--=&gt; preempt-depth</span><br><span class="hljs-comment">#                            ||| /     delay</span><br><span class="hljs-comment">#           TASK-PID   CPU#  ||||    TIMESTAMP  FUNCTION</span><br><span class="hljs-comment">#              | |       |   ||||       |         |</span><br>             kni-11436 [000] ....  1906.033365: alloc_netdev_mqs &lt;-kni_ioctl_create<br>             kni-11436 [000] ....  1906.033435: alloc_netdev_mqs &lt;-alloc_etherdev_mqs<br>             kni-11436 [000] ....  1906.220368: alloc_netdev_mqs &lt;-kni_ioctl_create<br>             kni-11436 [000] ....  1906.220440: alloc_netdev_mqs &lt;-alloc_etherdev_mqs<br><br></code></pre></td></tr></table></figure>
+
+<p>杀死 kni 程序后，ftrace 跟踪到 free_netdev 调用情况如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs bash"> Develop&gt;<span class="hljs-built_in">cat</span> ./trace<br><span class="hljs-comment"># tracer: function</span><br><span class="hljs-comment">#</span><br><span class="hljs-comment"># entries-in-buffer/entries-written: 2/2   #P:4</span><br><span class="hljs-comment">#</span><br><span class="hljs-comment">#                              _-----=&gt; irqs-off</span><br><span class="hljs-comment">#                             / _----=&gt; need-resched</span><br><span class="hljs-comment">#                            | / _---=&gt; hardirq/softirq</span><br><span class="hljs-comment">#                            || / _--=&gt; preempt-depth</span><br><span class="hljs-comment">#                            ||| /     delay</span><br><span class="hljs-comment">#           TASK-PID   CPU#  ||||    TIMESTAMP  FUNCTION</span><br><span class="hljs-comment">#              | |       |   ||||       |         |</span><br>             kni-11436 [000] ....  1990.960338: free_netdev &lt;-kni_dev_remove<br>             kni-11436 [000] ....  1990.986674: free_netdev &lt;-kni_dev_remove<br></code></pre></td></tr></table></figure>
+
+<p>能够看到这里申请了四次，但是只释放了两次，泄露了两个 netdev 结构（每个口泄露一个），符合预期。</p>
+<p>重新加载修改后的 rte_kni.ko 文件后测试记录如下：</p>
+<p>ftrace 跟踪到 alloc_netdev_mqs 函数调用情况如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs bash"><br> Develop&gt;<span class="hljs-built_in">cat</span> ./trace<br><span class="hljs-comment"># tracer: function</span><br><span class="hljs-comment">#</span><br><span class="hljs-comment"># entries-in-buffer/entries-written: 8/8   #P:4</span><br><span class="hljs-comment">#</span><br><span class="hljs-comment">#                              _-----=&gt; irqs-off</span><br><span class="hljs-comment">#                             / _----=&gt; need-resched</span><br><span class="hljs-comment">#                            | / _---=&gt; hardirq/softirq</span><br><span class="hljs-comment">#                            || / _--=&gt; preempt-depth</span><br><span class="hljs-comment">#                            ||| /     delay</span><br><span class="hljs-comment">#           TASK-PID   CPU#  ||||    TIMESTAMP  FUNCTION</span><br><span class="hljs-comment">#              | |       |   ||||       |         |</span><br>             kni-13861 [000] ....  2951.871499: alloc_netdev_mqs &lt;-kni_ioctl_create<br>             kni-13861 [000] ....  2951.871571: alloc_netdev_mqs &lt;-alloc_etherdev_mqs<br>             kni-13861 [000] ....  2952.059302: alloc_netdev_mqs &lt;-kni_ioctl_create<br>             kni-13861 [000] ....  2952.059372: alloc_netdev_mqs &lt;-alloc_etherdev_mqs<br><br></code></pre></td></tr></table></figure>
+
+<p>杀掉 kni 程序后，ftrace 跟踪到 free_netdev 调用情况如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-comment"># tracer: function</span><br><span class="hljs-comment">#</span><br><span class="hljs-comment"># entries-in-buffer/entries-written: 4/4   #P:4</span><br><span class="hljs-comment">#</span><br><span class="hljs-comment">#                              _-----=&gt; irqs-off</span><br><span class="hljs-comment">#                             / _----=&gt; need-resched</span><br><span class="hljs-comment">#                            | / _---=&gt; hardirq/softirq</span><br><span class="hljs-comment">#                            || / _--=&gt; preempt-depth</span><br><span class="hljs-comment">#                            ||| /     delay</span><br><span class="hljs-comment">#           TASK-PID   CPU#  ||||    TIMESTAMP  FUNCTION</span><br><span class="hljs-comment">#              | |       |   ||||       |         |</span><br>             kni-13861 [000] ....  3000.154817: free_netdev &lt;-kni_dev_remove<br>             kni-13861 [000] ....  3000.165235: free_netdev &lt;-kni_dev_remove<br>             kni-13861 [000] ....  3000.181801: free_netdev &lt;-kni_dev_remove<br>             kni-13861 [000] ....  3000.190228: free_netdev &lt;-kni_dev_remove<br></code></pre></td></tr></table></figure>
+
+<p>修复后申请了四次，释放了四次，符合预期。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>前期已经解决过一些 rte_kni.ko 模块的问题，但是这次暴露出的问题表明其中仍旧潜藏着一些问题。</p>
+<p>高版本的趋势是先【剥离】 rte_kni.ko 模块的 ethtool 功能，最终【完全抛弃】，这是正确的方向。</p>
+<p>rte_kni.ko 模块的 ethtool 功能本身就是一个【过渡功能】，【稳定性堪忧】，我们也应当追随潮流弃用 rte_kni.ko 的 ethtool 功能。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/linux/" class="category-chain-item">linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/" class="category-chain-item">网络开发</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E7%BD%91%E5%8D%A1%E9%A9%B1%E5%8A%A8/" class="category-chain-item">网卡驱动</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/linux/">#linux</a>
+      
+        <a href="/tags/%E7%BD%91%E5%8D%A1%E9%A9%B1%E5%8A%A8/">#网卡驱动</a>
+      
+        <a href="/tags/kernel/">#kernel</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>dpdk 程序创建 kni 虚拟网络接口失败的问题</div>
+      <div>https://sisyphus1212.github.io/2022/09/07/network/rte_kni/通过slabinfo定位内存泄露问题/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>sisyphus</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>September 7, 2022</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>Licensed under</div>
+        <div>
+          
+            
+            
+              <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/09/07/network/rte_kni/dpdk%20%E7%A8%8B%E5%BA%8F%E5%AF%B9pause%20%E5%B8%A7%E7%9A%84%E5%A4%84%E7%90%86/" title="dpdk 程序对pause 帧的处理">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">dpdk 程序对pause 帧的处理</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/09/02/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/linux%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8resource/" title="linux设备驱动resource">
+                        <span class="hidden-mobile">linux设备驱动resource</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#comments', function() {
+      var light = 'github-light';
+      var dark = 'github-dark';
+      var schema = document.documentElement.getAttribute('data-user-color-scheme');
+      if (schema === 'dark') {
+        schema = dark;
+      } else {
+        schema = light;
+      }
+      window.UtterancesThemeLight = light;
+      window.UtterancesThemeDark = dark;
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'sisyphus1212/comments');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', schema);
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    })
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        被访:次数:
+        <span id="busuanzi_value_site_pv"></span>
+        
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        人数:
+        <span id="busuanzi_value_site_uv"></span>
+        
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+  <script>
+    var wechat_div = document.getElementById('wechat_show');
+    var wechatImg = document.getElementById("wechat_img");
+    wechat_click = document.getElementById('wechat_id');
+    wechat_click.onclick = function() {
+        wechat_div.style.display = "block";
+        wechatImg.src = "./img/wechat.png";
+    }
+    wechat_div.onclick = function() {
+        wechat_div.style.display = "none";
+    }
+</script>
+</body>
+</html>

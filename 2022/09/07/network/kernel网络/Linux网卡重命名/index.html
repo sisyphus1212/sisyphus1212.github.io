@@ -1,0 +1,899 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/go.jpg">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="sisyphus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="前言由于内核启动时对于多网络接口的枚举是并行的，这导致每次创建的ethx 与真实的物理口之间的映射关系是无法预测的, 因此就有人考虑，根据网卡在物理板子上的topo结构来给网卡命名，于是就引入net.ifnames 和 biosdevname规范，来重命名内核创建的网络接口下面是根据net.ifnames 和 biosdevname规范实现的几种网卡接口命名方式：  systemd.link 重命">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux 网卡重命名">
+<meta property="og:url" content="https://sisyphus1212.github.io/2022/09/07/network/kernel%E7%BD%91%E7%BB%9C/Linux%E7%BD%91%E5%8D%A1%E9%87%8D%E5%91%BD%E5%90%8D/index.html">
+<meta property="og:site_name" content="蚂蚁没问题">
+<meta property="og:description" content="前言由于内核启动时对于多网络接口的枚举是并行的，这导致每次创建的ethx 与真实的物理口之间的映射关系是无法预测的, 因此就有人考虑，根据网卡在物理板子上的topo结构来给网卡命名，于是就引入net.ifnames 和 biosdevname规范，来重命名内核创建的网络接口下面是根据net.ifnames 和 biosdevname规范实现的几种网卡接口命名方式：  systemd.link 重命">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://remil1a.github.io/2019/11/15/Linux-Network-Manage/2.png">
+<meta property="article:published_time" content="2022-09-07T16:04:02.000Z">
+<meta property="article:modified_time" content="2024-03-27T01:59:23.862Z">
+<meta property="article:author" content="sisyphus">
+<meta property="article:tag" content="linux">
+<meta property="article:tag" content="网卡驱动">
+<meta property="article:tag" content="kernel">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://remil1a.github.io/2019/11/15/Linux-Network-Manage/2.png">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>Linux 网卡重命名 - 蚂蚁没问题</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"sisyphus1212.github.io","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":75,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<style>
+    .box_modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgba(94, 94, 94, 0.051);
+        /* Fallback color */
+        background-color: rgba(81, 81, 81, 0.032);
+        /* Black w/ opacity */
+    }
+
+    .box_modal_content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 150px;
+    }
+    /* 添加动画 */
+
+    .box_modal_content,
+    #caption {
+        -webkit-animation-name: zoom;
+        -webkit-animation-duration: 0.6s;
+        animation-name: zoom;
+        animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+        from {
+            -webkit-transform: scale(0)
+        }
+        to {
+            -webkit-transform: scale(1)
+        }
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+        to {
+            transform: scale(1)
+        }
+    }
+</style>
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>蚂蚁没问题</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于我
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/5.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="Linux 网卡重命名"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-09-07 16:04" pubdate>
+          September 7, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          7.5k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          63 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+    <div id="wechat_show" class="box_modal" style="z-index: 999">
+        <!-- 弹窗内容 -->
+        <img class="box_modal_content" id="wechat_img">
+    </div>
+
+    <div id="sockial-link"  class="cover-social-link" style="color: var(--subtitle-color);--text-color: var(--navbar-text-color);z-index: 500;
+        position: absolute; transform: translateX(-50%); width: 200px; margin-top: -120px;
+    align-self: center; display: flex; justify-content: space-evenly; flex-wrap: nowrap; left: 50%;">
+        <a href="https://github.com/sisyphus1212/" class="tooltipped" target="_blank" data-tooltip="我的github" data-position="top" data-delay="50"> <i class="iconfont icon-github-fill"></i></a>
+        <a href="https://space.bilibili.com/228776952" class="tooltipped" target="_blank" data-tooltip="b站" data-position="top" data-delay="50"><i class="iconfont icon-bilibili-fill"></i> </a>
+        <a href="mailto:1250407709@qq.com" class="tooltipped" target="_blank" aria-label="1258407709@qq.com" data-position="top" data-delay="50"><i class="iconfont icon-mail"></i> </a>
+        <a id="wechat_id" class="tooltipped reward-link modal-trigger btn-medium waves-effect waves-light" data-tooltip="wechat" data-position="top" data-delay="50"><i class="iconfont icon-wechat-fill"></i> </a>
+        <a href="javascript:;" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50"><i class="iconfont icon-rss-fill"></i></a>
+    </div>
+  </header>
+
+  <main>
+    
+      
+<script> document.getElementById('sockial-link').style.display="none"</script>
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">Linux 网卡重命名</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>由于内核启动时对于多网络接口的枚举是并行的，这导致每次创建的ethx 与真实的物理口之间的映射关系是无法预测的, 因此就有人考虑，根据网卡在物理板子上的topo结构来给网卡命名，于是就引入net.ifnames 和 biosdevname规范，来重命名内核创建的网络接口<br>下面是根据net.ifnames 和 biosdevname规范实现的几种网卡接口命名方式：</p>
+<ol>
+<li>systemd.link 重命名(systemd-udevd)</li>
+<li>udev rule 重命名</li>
+<li>biosdevname 重命名 (常见于centos)</li>
+<li>ifrename动态重命名</li>
+</ol>
+<h2 id="查看网卡命名"><a href="#查看网卡命名" class="headerlink" title="查看网卡命名"></a>查看网卡命名</h2><p>当前网卡的命名方式可以通过proc文件查看，比如网卡ens160，命名方式为4，即对应内核中的NET_NAME_RENAMED，表示网卡名是被用户空间程序修改的：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs bash"><span class="hljs-comment"># cat /sys/class/net/ens160/name_assign_type</span><br>4<br><br><span class="hljs-comment">#define NET_NAME_ENUM       1   /* enumerated by kernel */</span><br><span class="hljs-comment">#define NET_NAME_PREDICTABLE    2   /* predictably named by the kernel */</span><br><span class="hljs-comment">#define NET_NAME_USER       3   /* provided by user-space */</span><br><span class="hljs-comment">#define NET_NAME_RENAMED    4   /* renamed by user-space */</span><br></code></pre></td></tr></table></figure>
+<p>网卡具体的命名策略可以通过udevadm查看，可以看到enp62s0，是根据&#x2F;lib&#x2F;systemd&#x2F;network&#x2F;99-default.link进行的命名</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs bash"> udevadm info /sys/class/net/ifname | grep ID_NET_NAME<br><br>P: /devices/pci0000:3a/0000:3a:02.0/0000:3c:00.0/0000:3d:01.0/0000:3e:00.0/net/bf_pci0<br>E: DEVPATH=/devices/pci0000:3a/0000:3a:02.0/0000:3c:00.0/0000:3d:01.0/0000:3e:00.0/net/bf_pci0<br>E: ID_BUS=pci<br>E: ID_MODEL_ID=0x0010<br>E: ID_NET_DRIVER=bf_kpkt<br>E: ID_NET_LINK_FILE=/lib/systemd/network/99-default.link<br>E: ID_NET_NAME_PATH=enp62s0<br>E: ID_NET_NAME_SLOT=ens1<br>E: ID_PATH=pci-0000:3e:00.0<br>E: ID_PATH_TAG=pci-0000_3e_00_0<br>E: ID_PCI_CLASS_FROM_DATABASE=Unassigned class<br>E: ID_VENDOR_ID=0x1d1c<br>E: IFINDEX=491<br>E: INTERFACE=bf_pci0<br>E: SUBSYSTEM=net<br>E: SYSTEMD_ALIAS=/sys/subsystem/net/devices/bf_pci0<br>E: TAGS=:systemd:<br>E: USEC_INITIALIZED=1909742190470<br></code></pre></td></tr></table></figure>
+
+<h1 id="systemd-link-重命名"><a href="#systemd-link-重命名" class="headerlink" title="systemd.link 重命名"></a>systemd.link 重命名</h1><p>参考:[<a target="_blank" rel="noopener" href="http://www.jinbuguo.com/systemd/systemd.link.html]">http://www.jinbuguo.com/systemd/systemd.link.html]</a><br>在用户空间，默认情况下ubuntu会根据systemd目录下的link文件命名网卡。<br>Link文件分别位于：</p>
+<ol>
+<li>系统网络目录(&#x2F;usr&#x2F;lib&#x2F;systemd&#x2F;network)。</li>
+<li>运行时网络目录(&#x2F;run&#x2F;systemd&#x2F;network)。</li>
+<li>本机网络目录(&#x2F;etc&#x2F;systemd&#x2F;network)。</li>
+</ol>
+<p>所有的Link文件(无论位于哪个目录中)，统一按照文件名的字典顺序处理。 对于不同目录下的同名Link文件， 仅以优先级最高的目录中的那一个为准。 具体说来就是： &#x2F;etc&#x2F; 的优先级最高、 &#x2F;run&#x2F; 的优先级居中、 &#x2F;usr&#x2F;lib&#x2F; 的优先级最低。<br>在这里只详细介绍一下Link文件中的MACAddressPolicy和NamePolicy：</p>
+<h2 id="MACAddressPolicy"><a href="#MACAddressPolicy" class="headerlink" title="MACAddressPolicy"></a>MACAddressPolicy</h2><p>应该如何设置网卡的MAC地址：</p>
+<p>“persistent”: 如果内核使用了网卡硬件固有的MAC地址(绝大多数网卡都有)， 那么啥也不做，直接使用内核的MAC地址。 否则，将会随机新生成一个 确保在多次启动之间保持固定不变的MAC地址(针对给定的主板与网卡)。 自动生成MAC地址的特性 要求网卡必须存在 ID_NET_NAME_* 属性， 否则无法自动生成MAC地址。</p>
+<p>“random”: 如果内核使用了随机生成的MAC地址(而不是网卡硬件固有的MAC地址)， 那么啥也不做，直接使用内核的MAC地址。 否则，将在网卡每次出现的时候(一般在启动过程中)随机新生成一个MAC地址。 无论使用上述哪种方式生成的MAC地址， 都将设置 “unicast” 与 “locally administered” 位。</p>
+<p>“none”:无条件的直接使用内核的MAC地址。</p>
+<p>MACAddress<br>在未设置 “MACAddressPolicy&#x3D;” 时所使用MAC地址。</p>
+<h2 id="NamePolicy"><a href="#NamePolicy" class="headerlink" title="NamePolicy"></a>NamePolicy</h2><p>应该如何设置网卡的名称， 仅在未使用 “net.ifnames&#x3D;0″ 内核引导选项时有意义。 接受一个空格分隔的策略列表， 顺序尝试每个策略，并以第一个成功的策略为准。 所得的名字将被用于设置网卡的 “ID_NET_NAME” 属性。 注意，默认的udev规则会用 “ID_NET_NAME” 的值设置 “NAME” 属性(也就是网卡的名称)。 如果网卡已经被空户空间命名，那么将不会进行任何重命名操作。 可用的策略如下：</p>
+<p>“kernel”: 如果内核已经为此网卡设置了固定的可预测名称， 那么不进行任何重命名操作。</p>
+<p>“database”: 基于网卡的 “ID_NET_NAME_FROM_DATABASE” 属性值(来自于udev硬件数据库)设置网卡的名称。</p>
+<p>“onboard”: 基于网卡的 “ID_NET_NAME_ONBOARD” 属性值(来自于板载网卡固件)设置网卡的名称。</p>
+<p>“slot”: 基于网卡的 “ID_NET_NAME_SLOT” 属性值(来自于可插拔网卡固件)设置网卡的名称。</p>
+<p>“path”: 基于网卡的 “ID_NET_NAME_PATH” 属性值(来自于网卡的总线位置)设置网卡的名称。</p>
+<p>“mac”: 基于网卡的 “ID_NET_NAME_MAC” 属性值(来自于网卡的固定MAC地址)设置网卡的名称。</p>
+<p>Name: 在 NamePolicy&#x3D; 无效时应该使用的网卡名称。 无效的情况包括： (1)未设置 NamePolicy&#x3D; ； (2)NamePolicy&#x3D; 中的策略全失败； (3)使用了”net.ifnames&#x3D;0″内核引导选项</p>
+<p>注意， 千万不要设置可能被内核用于其他网口的名称(例如 “eth0″)， 这可能会导致 udev 在分配名称时与内核产生竞争， 从而导致不可预期的后果。 最好的做法是使用一些永远不会导致冲突名称或前缀，例如： “internal0″”external0″ 或 “lan0″”lan1″&#x2F;”lan3″</p>
+<h1 id="udev-rule-重命名"><a href="#udev-rule-重命名" class="headerlink" title="udev rule 重命名"></a>udev rule 重命名</h1><p>udev 辅助工具程序 &#x2F;lib&#x2F;udev&#x2F;rename_device 会根据 &#x2F;usr&#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;60-net.rules 中的指示去查询 &#x2F;etc&#x2F;sysconfig&#x2F;network-script&#x2F;ifcfg-IFACE 配置文件，根据HWADDR 读取设备名称,如果在ifcfg-xx中匹配到HWADDR&#x3D;xx:xx:xx:xx:xx:xx参数的网卡接口则选取DEVICE&#x3D;yyyy中设置的名字作为网卡名称</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs c">SUBSYSTEM==<span class="hljs-string">&quot;net&quot;</span>,ACTION==<span class="hljs-string">&quot;add&quot;</span>,DRIVERS==<span class="hljs-string">&quot;?*&quot;</span>,ATTR&#123;address&#125;==<span class="hljs-string">&quot;需要修改名称的网卡MAC地址&quot;</span>,ATTR｛type｝==<span class="hljs-string">&quot;1&quot;</span>,KERNEL==<span class="hljs-string">&quot;myeth*&quot;</span>,NAME=<span class="hljs-string">&quot;myeth0&quot;</span><br></code></pre></td></tr></table></figure>
+<h2 id="net-ifnames-systemd-udev-的命名规范为：设备类型-设备位置-数字"><a href="#net-ifnames-systemd-udev-的命名规范为：设备类型-设备位置-数字" class="headerlink" title="net.ifnames(systemd, udev) 的命名规范为：设备类型+设备位置+数字"></a>net.ifnames(systemd, udev) 的命名规范为：设备类型+设备位置+数字</h2><p>udev 和 systemd.link都是使用该规则<br>设备类型：<br>en 表示Ethernet<br>wl 表示WLAN<br>ww 表示无线广域网WWAN</p>
+<table>
+<thead>
+<tr>
+<th>format</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>o&lt;index&gt;</code></td>
+<td>on-board device index number ,集成设备索引号</td>
+</tr>
+<tr>
+<td><code>s&lt;slot&gt;[f&lt;functoin&gt;][d&lt;dev_id&gt;]</code></td>
+<td>hotplug slot index number,扩展槽的索引号</td>
+</tr>
+<tr>
+<td><code>x&lt;MAC&gt;</code></td>
+<td>MAC address ,基于MAC进行命名</td>
+</tr>
+<tr>
+<td><code>p&lt;bus&gt;s&lt;slot&gt;[f&lt;function&gt;][d&lt;dev_id&gt;]</code></td>
+<td>PCI geographical location ,PCI扩展总线</td>
+</tr>
+<tr>
+<td><code>p&lt;bus&gt;s&lt;slot&gt;[f&lt;function&gt;][u&lt;port&gt;][...][c&lt;config&gt;][i&lt;interface&gt;] </code></td>
+<td>USB port numberchain</td>
+</tr>
+</tbody></table>
+<figure class="highlight gcode"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs gcode">实际的例子:<br>​ e<span class="hljs-symbol">no1</span> 板载网卡<br>​ e<span class="hljs-symbol">np0</span>s<span class="hljs-number">2</span> pci网卡<br>​ e<span class="hljs-symbol">ns33</span> pci网卡<br>​ wlp<span class="hljs-number">3</span>s<span class="hljs-number">0</span> PCI无线网卡<br>​ wwp<span class="hljs-number">0</span>s<span class="hljs-number">29</span>f<span class="hljs-number">7</span>u<span class="hljs-number">2</span>i<span class="hljs-number">2</span> <span class="hljs-number">4</span>Gmodem<br>​ wlp<span class="hljs-number">0</span>s<span class="hljs-number">2</span>f<span class="hljs-number">1</span>u<span class="hljs-number">4</span>u<span class="hljs-number">1</span> 连接在USB Hub上的无线网卡<br>​ e<span class="hljs-symbol">nx78</span>e<span class="hljs-number">7</span>d<span class="hljs-number">1</span>ea<span class="hljs-number">46</span>da pci网卡<br></code></pre></td></tr></table></figure>
+
+<h1 id="biosdevname-重命名"><a href="#biosdevname-重命名" class="headerlink" title="biosdevname 重命名"></a>biosdevname 重命名</h1><p>biosdevname 根据 &#x2F;user&#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;71-boosdevname.rules<br>biosdevname 程序使用系统 BIOS 的信息，特别是类型 9 (System Slot) 和类型 41 （板设备扩展信息）字段包含在 SMBIOS 中。如果系统的 BIOS 没有 SMBIOS 版本 2.6 或更高版本，且此数据不会使用，则不会使用新的命名规则。大多数较旧的硬件不支持此功能，因为缺少包含正确的 SMBIOS 版本和字段信息的 BIOS。</p>
+<h2 id="biosdevname-的命名规范："><a href="#biosdevname-的命名规范：" class="headerlink" title="biosdevname 的命名规范："></a>biosdevname 的命名规范：</h2><table>
+<thead>
+<tr>
+<th>device</th>
+<th>name</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Embedded network interface(LOM)</td>
+<td><code>em[1234....]</code></td>
+</tr>
+<tr>
+<td>PCI card network interface</td>
+<td><code>p&lt;slot&gt;p&lt;ethernet port&gt;</code></td>
+</tr>
+<tr>
+<td>Virtual function</td>
+<td><code>p&lt;slot&gt;p&lt;ethernet port&gt;_&lt;virtual_interface&gt;</code></td>
+</tr>
+</tbody></table>
+<figure class="highlight smali"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs smali">实际的例子:<br>​ em1 板载网卡<br>​ p3p4 pci网卡<br>​ p3p4_1 虚拟网卡<br></code></pre></td></tr></table></figure>
+<p>systemd中rule的实际执行顺序:<br>按照如下顺序执行udev的rule</p>
+<ol>
+<li>&#x2F;usr&#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;60-net.rules</li>
+<li>&#x2F;usr&#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;71-biosdevname.rules</li>
+<li>&#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;75-net-description.rules</li>
+<li>&#x2F;usr&#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;80-net-name-slot.rules</li>
+</ol>
+<h1 id="ifrename动态重命名"><a href="#ifrename动态重命名" class="headerlink" title="ifrename动态重命名"></a>ifrename动态重命名</h1><p>一些系统中，有根据网口的不同功能重命名 netdev 的需求。这可以通过调用 ifrename 命令来完成。这个命令在我的系统中并没有安装，我首先执行如下命令，搜索需要安装的程序名。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash">[sisyphus@ubuntu] ~ $ sudo apt-cache search ifrename<br>ifrename - Rename network interfaces based on various static criteria<br></code></pre></td></tr></table></figure>
+<p>从上面的输出中，我确定需要安装的程序名就是 ifrename。执行如下命令安装 ifrename 命令。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">[sisyphus@ubuntu] ~ $ sudo apt-get install ifrename<br></code></pre></td></tr></table></figure>
+<p>安装成功后，man ifrename 查看如何使用这个命令。下面是 man ifrename 的部分输出。</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs css">ifrename <span class="hljs-selector-attr">[-c configfile]</span> <span class="hljs-selector-attr">[-p]</span> <span class="hljs-selector-attr">[-d]</span> <span class="hljs-selector-attr">[-u]</span> <span class="hljs-selector-attr">[-v]</span> <span class="hljs-selector-attr">[-V]</span> <span class="hljs-selector-attr">[-D]</span> <span class="hljs-selector-attr">[-C]</span><br>ifrename <span class="hljs-selector-attr">[-c configfile]</span> <span class="hljs-selector-attr">[-i interface]</span> <span class="hljs-selector-attr">[-n newname]</span><br></code></pre></td></tr></table></figure>
+<p>注意 ifrename 必须在接口被 up 之前执行，不能对一个 up 的接口执行 ifrename 操作，可以将这样的行为理解为，在 up 的时候 ifrename 被引用。这表明 down 掉接口就可以修改名字了。</p>
+<p>一个具体的示例如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs bash">[sisyphus@ubuntu]$ sudo /sbin/ifconfig enp2s0 down<br>[sisyphus@ubuntu]$ sudo ifrename -i enp2s0 -n eth0<br>eth0<br>[sisyphus@ubuntu]$ /sbin/ifconfig eth0<br>eth0: flags=4098&lt;BROADCAST,MULTICAST&gt;  mtu 1500<br>        ether 80:e8:2c:17:f0:77  txqueuelen 1000  (Ethernet)<br>        RX packets 0  bytes 0 (0.0 B)<br>        RX errors 0  dropped 0  overruns 0  frame 0<br>        TX packets 0  bytes 0 (0.0 B)<br>        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0<br></code></pre></td></tr></table></figure>
+<p>在上面的示例中，我首先使用 ifconfig down 掉接口，然后执行 ifrename 将网络接口名称从 enp2s0 修改为 eth0，这之后 ifconfig eth0 查看接口信息确认修改成功。</p>
+<p>这时候查看 dmesg 的输出信息，发现有下面的输出：</p>
+<figure class="highlight angelscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs angelscript"><span class="hljs-string">[ 4288.006591]</span> r8169 <span class="hljs-number">0000</span>:<span class="hljs-number">02</span>:<span class="hljs-number">00.0</span> eth0: renamed <span class="hljs-keyword">from</span> enp2s0<br></code></pre></td></tr></table></figure>
+<p>使用 strace 命令查看系统调用过程，发现核心的过程在于下面两个系统调用：</p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs stylus"><span class="hljs-function"><span class="hljs-title">socket</span><span class="hljs-params">(AF_INET, SOCK_DGRAM, IPPROTO_IP)</span></span> = <span class="hljs-number">3</span><br><span class="hljs-function"><span class="hljs-title">ioctl</span><span class="hljs-params">(<span class="hljs-number">3</span>, SIOCSIFNAME, &#123;ifr_name=<span class="hljs-string">&quot;eth0&quot;</span>, ifr_newname=<span class="hljs-string">&quot;enp2s0&quot;</span>&#125;)</span></span> = <span class="hljs-number">0</span><br></code></pre></td></tr></table></figure>
+<p>上面的两个系统调用首先执行 socket 打开一个网络设备，然后通过 ioctl 命令来修改网络设备的配置。</p>
+<p>内核里面的流程如下所示：</p>
+<figure class="highlight xl"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs xl"><span class="hljs-function"><span class="hljs-title">sock_ioctl</span> -&gt;</span> <span class="hljs-function"><span class="hljs-title">sock_do_ioctl</span> -&gt;</span> <span class="hljs-function"><span class="hljs-title">dev_ioctl</span> -&gt;</span> <span class="hljs-function"><span class="hljs-title">dev_ifsioc</span> -&gt;</span> dev_change_name<br></code></pre></td></tr></table></figure>
+<p>最终是通过调用 dev_change_name 函数来完成虚拟网卡接口重命名的。</p>
+<h1 id="禁用一致的网络设备命名"><a href="#禁用一致的网络设备命名" class="headerlink" title="禁用一致的网络设备命名"></a>禁用一致的网络设备命名</h1><p>通过 dmesg 中的部分输出，可以看到最开始虚拟网络接口的名称为 eth0，最后一行的信息中可以看到接口名称被改为了 enp2s0。</p>
+<figure class="highlight dns"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs dns">[    <span class="hljs-number">4.218735</span>] r<span class="hljs-number">8169 0000</span>:<span class="hljs-number">02</span>:<span class="hljs-number">00</span>.<span class="hljs-number">0</span> eth0: RTL8168h/<span class="hljs-number">8111h</span>, <span class="hljs-number">30</span>:<span class="hljs-number">88</span>:<span class="hljs-number">2</span>c:<span class="hljs-number">17</span>:<span class="hljs-number">55</span>:d7, XID <span class="hljs-number">54100880</span>, IRQ <span class="hljs-number">126</span><br>[    <span class="hljs-number">4.218736</span>] r<span class="hljs-number">8169 0000</span>:<span class="hljs-number">02</span>:<span class="hljs-number">00</span>.<span class="hljs-number">0</span> eth0: jumbo features [frames: <span class="hljs-number">9200</span> bytes, tx checksumming: ko]<br>[    <span class="hljs-number">4.219142</span>] xhci_hcd <span class="hljs-number">0000:00:14</span>.<span class="hljs-number">0</span>: hcc params <span class="hljs-number">0x200077c1</span> hci version <span class="hljs-number">0</span>x110 quirks <span class="hljs-number">0</span>x00000<span class="hljs-number">00000009810</span><br>[    <span class="hljs-number">4.219435</span>] hub <span class="hljs-number">1-0:1.0</span>: USB hub found<br>[    <span class="hljs-number">4.219456</span>] hub <span class="hljs-number">1-0:1.0</span>: <span class="hljs-number">12</span> ports detected<br>[    <span class="hljs-number">4.220818</span>] r<span class="hljs-number">8169 0000</span>:<span class="hljs-number">02</span>:<span class="hljs-number">00</span>.<span class="hljs-number">0</span> enp2s0: renamed from eth0<br></code></pre></td></tr></table></figure>
+<p>执行grub2-mkconfig -o &#x2F;boot&#x2F;grub2&#x2F;grub.cfg命令生成更新grub配置参数:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c">vim /etc/<span class="hljs-keyword">default</span>/grub<br>net.ifnames=<span class="hljs-number">0</span> biosdevname=<span class="hljs-number">0</span><br><br>grub2-mkconfig -o /boot/grub2/grub.cfg<br>reboot<br></code></pre></td></tr></table></figure>
+<p>如果系统管理员想要屏蔽 &#x2F;usr&#x2F;lib&#x2F; 目录中的某个Link文件， 那么最佳做法是在 &#x2F;etc&#x2F; 目录中创建一个 指向 &#x2F;dev&#x2F;null 的同名符号链接， 即可彻底屏蔽 &#x2F;usr&#x2F;lib&#x2F; 目录中的同名文件。</p>
+<p>在上面Centos7中命名的策略顺序是系统默认的。<br>如系统BIOS符合要求，且系统中安装了biosdevname，且biosdevname&#x3D;1启用，则biosdevname优先；<br>如果BIOS不符合biosdevname要求或biosdevname&#x3D;0，则仍然是systemd的规则优先。<br>如果用户自己定义了udevrule来修改内核设备名字，则用户规则优先。</p>
+<p>内核参数组合使用的时候，其结果如下：</p>
+<ol>
+<li>默认内核参数(biosdevname&#x3D;0，net.ifnames&#x3D;1): 网卡名”enp5s2”</li>
+<li>biosdevname&#x3D;1，net.ifnames&#x3D;0：网卡名 “em1”</li>
+<li>biosdevname&#x3D;0，net.ifnames&#x3D;0：网卡名 “eth0” (最传统的方式,eth0 eth1傻傻分不清)</li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/linux/" class="category-chain-item">linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/" class="category-chain-item">网络开发</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E7%BD%91%E5%8D%A1%E9%A9%B1%E5%8A%A8/" class="category-chain-item">网卡驱动</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/linux/">#linux</a>
+      
+        <a href="/tags/%E7%BD%91%E5%8D%A1%E9%A9%B1%E5%8A%A8/">#网卡驱动</a>
+      
+        <a href="/tags/kernel/">#kernel</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>Linux 网卡重命名</div>
+      <div>https://sisyphus1212.github.io/2022/09/07/network/kernel网络/Linux网卡重命名/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>sisyphus</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>September 7, 2022</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>Licensed under</div>
+        <div>
+          
+            
+            
+              <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/09/11/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%BF%AE%E6%94%B9%E4%BB%BB%E6%84%8FLinux%E8%BF%9B%E7%A8%8B%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4%E5%AE%9E%E6%96%BD%E4%BB%A3%E7%A0%81%E6%B3%A8%E5%85%A5/" title="修改任意Linux进程地址空间实施代码注入">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">修改任意Linux进程地址空间实施代码注入</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/09/07/network/rte_kni/dpdk%20kni%20%E8%99%9A%E6%8B%9F%E7%BD%91%E7%BB%9C%E6%8E%A5%E5%8F%A3%E5%8E%9F%E7%90%86/" title="dpdk 程序kni 虚拟网络接口原理">
+                        <span class="hidden-mobile">dpdk 程序kni 虚拟网络接口原理</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#comments', function() {
+      var light = 'github-light';
+      var dark = 'github-dark';
+      var schema = document.documentElement.getAttribute('data-user-color-scheme');
+      if (schema === 'dark') {
+        schema = dark;
+      } else {
+        schema = light;
+      }
+      window.UtterancesThemeLight = light;
+      window.UtterancesThemeDark = dark;
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'sisyphus1212/comments');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', schema);
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    })
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        被访:次数:
+        <span id="busuanzi_value_site_pv"></span>
+        
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        人数:
+        <span id="busuanzi_value_site_uv"></span>
+        
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+  <script>
+    var wechat_div = document.getElementById('wechat_show');
+    var wechatImg = document.getElementById("wechat_img");
+    wechat_click = document.getElementById('wechat_id');
+    wechat_click.onclick = function() {
+        wechat_div.style.display = "block";
+        wechatImg.src = "./img/wechat.png";
+    }
+    wechat_div.onclick = function() {
+        wechat_div.style.display = "none";
+    }
+</script>
+</body>
+</html>

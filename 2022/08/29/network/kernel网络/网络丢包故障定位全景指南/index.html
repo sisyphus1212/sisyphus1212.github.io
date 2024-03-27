@@ -1,0 +1,885 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/go.jpg">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="sisyphus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="引言本期分享一个比较常见的⽹络问题–丢包。例如我们去ping⼀个⽹站，如果能ping通，且⽹站返回信息全⾯，则说明与⽹站服务器的通信是畅通的，如果ping不通，或者⽹站返回的信息不全等，则很可能是数据被丢包了，类似情况想必⼤家都不陌⽣。针对⽹络丢包，本⽂提供⼀些常见的丢包故障定位⽅法，希望能够帮助⼤家对⽹络丢包有更多的认识，遇到丢包莫要慌，且跟着⼀起来涨姿(知)势(识)··· 数据包接收、发送原理">
+<meta property="og:type" content="article">
+<meta property="og:title" content="网络丢包故障定位全景指南">
+<meta property="og:url" content="https://sisyphus1212.github.io/2022/08/29/network/kernel%E7%BD%91%E7%BB%9C/%E7%BD%91%E7%BB%9C%E4%B8%A2%E5%8C%85%E6%95%85%E9%9A%9C%E5%AE%9A%E4%BD%8D%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/index.html">
+<meta property="og:site_name" content="蚂蚁没问题">
+<meta property="og:description" content="引言本期分享一个比较常见的⽹络问题–丢包。例如我们去ping⼀个⽹站，如果能ping通，且⽹站返回信息全⾯，则说明与⽹站服务器的通信是畅通的，如果ping不通，或者⽹站返回的信息不全等，则很可能是数据被丢包了，类似情况想必⼤家都不陌⽣。针对⽹络丢包，本⽂提供⼀些常见的丢包故障定位⽅法，希望能够帮助⼤家对⽹络丢包有更多的认识，遇到丢包莫要慌，且跟着⼀起来涨姿(知)势(识)··· 数据包接收、发送原理">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-15-57-27.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-13-20.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-15-07.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-17-20.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-20-10.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-20-41.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-22-40.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-23-38.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-25-28.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-26-55.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-28-12.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-28-43.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-29-32.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-30-00.png?raw=true">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-31-00.png?raw=true">
+<meta property="article:published_time" content="2022-08-29T14:36:15.000Z">
+<meta property="article:modified_time" content="2024-03-27T01:59:23.862Z">
+<meta property="article:author" content="sisyphus">
+<meta property="article:tag" content="网络丢包">
+<meta property="article:tag" content="网络数据包">
+<meta property="article:tag" content="数据包">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-15-57-27.png?raw=true">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>网络丢包故障定位全景指南 - 蚂蚁没问题</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"sisyphus1212.github.io","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":75,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<style>
+    .box_modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgba(94, 94, 94, 0.051);
+        /* Fallback color */
+        background-color: rgba(81, 81, 81, 0.032);
+        /* Black w/ opacity */
+    }
+
+    .box_modal_content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 150px;
+    }
+    /* 添加动画 */
+
+    .box_modal_content,
+    #caption {
+        -webkit-animation-name: zoom;
+        -webkit-animation-duration: 0.6s;
+        animation-name: zoom;
+        animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+        from {
+            -webkit-transform: scale(0)
+        }
+        to {
+            -webkit-transform: scale(1)
+        }
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+        to {
+            transform: scale(1)
+        }
+    }
+</style>
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>蚂蚁没问题</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于我
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/5.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="网络丢包故障定位全景指南"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-08-29 14:36" pubdate>
+          August 29, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          4.5k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          38 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+    <div id="wechat_show" class="box_modal" style="z-index: 999">
+        <!-- 弹窗内容 -->
+        <img class="box_modal_content" id="wechat_img">
+    </div>
+
+    <div id="sockial-link"  class="cover-social-link" style="color: var(--subtitle-color);--text-color: var(--navbar-text-color);z-index: 500;
+        position: absolute; transform: translateX(-50%); width: 200px; margin-top: -120px;
+    align-self: center; display: flex; justify-content: space-evenly; flex-wrap: nowrap; left: 50%;">
+        <a href="https://github.com/sisyphus1212/" class="tooltipped" target="_blank" data-tooltip="我的github" data-position="top" data-delay="50"> <i class="iconfont icon-github-fill"></i></a>
+        <a href="https://space.bilibili.com/228776952" class="tooltipped" target="_blank" data-tooltip="b站" data-position="top" data-delay="50"><i class="iconfont icon-bilibili-fill"></i> </a>
+        <a href="mailto:1250407709@qq.com" class="tooltipped" target="_blank" aria-label="1258407709@qq.com" data-position="top" data-delay="50"><i class="iconfont icon-mail"></i> </a>
+        <a id="wechat_id" class="tooltipped reward-link modal-trigger btn-medium waves-effect waves-light" data-tooltip="wechat" data-position="top" data-delay="50"><i class="iconfont icon-wechat-fill"></i> </a>
+        <a href="javascript:;" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50"><i class="iconfont icon-rss-fill"></i></a>
+    </div>
+  </header>
+
+  <main>
+    
+      
+<script> document.getElementById('sockial-link').style.display="none"</script>
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">网络丢包故障定位全景指南</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>本期分享一个比较常见的⽹络问题–丢包。例如我们去ping⼀个⽹站，如果能ping通，且⽹站返回信息全⾯，则说明与⽹站服务器的通信是畅通的，如果ping不通，或者⽹站返回的信息不全等，则很可能是数据被丢包了，类似情况想必⼤家都不陌⽣。针对⽹络丢包，本⽂提供⼀些常见的丢包故障定位⽅法，希望能够帮助⼤家对⽹络丢包有更多的认识，遇到丢包莫要慌，且跟着⼀起来涨姿(知)势(识)···</p>
+<h1 id="数据包接收、发送原理"><a href="#数据包接收、发送原理" class="headerlink" title="数据包接收、发送原理"></a>数据包接收、发送原理</h1><p><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-15-57-27.png?raw=true" srcset="/img/loading.gif" lazyload><br>##发送数据包：<br><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-13-20.png?raw=true" srcset="/img/loading.gif" lazyload></p>
+<ol>
+<li>应⽤程序的数据包，在TCP层增加TCP报⽂头，形成可传输的数据包。</li>
+<li>在IP层增加IP报头，形成IP报⽂。</li>
+<li>经过数据⽹卡驱动程序将IP包再添加14字节的MAC头，构成frame（暂⽆CRC），frame（暂⽆CRC）中含有发送端和接收端的MAC地址。</li>
+<li>驱动程序将frame（暂⽆CRC）拷贝到⽹卡的缓冲区，由⽹卡处理。</li>
+<li>⽹卡为frame（暂⽆CRC）添加头部同步信息和CRC校验，将其封装为可以发送的packet，然后再发送到⽹线上，这样说就完成了⼀个IP报⽂的发送了，所有连接到这个⽹线上的⽹卡都可以看到该packet。</li>
+</ol>
+<h2 id="接收数据包："><a href="#接收数据包：" class="headerlink" title="接收数据包："></a>接收数据包：</h2><p><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-15-07.png?raw=true" srcset="/img/loading.gif" lazyload></p>
+<ol>
+<li>⽹卡收到⽹线上的packet，⾸先检查packet的CRC校验，保证完整性，然后将packet头去掉，得到frame。（⽹卡会检查MAC包内的⽬的MAC地址是否和本⽹卡的MAC地址⼀样，不⼀样则会丢弃。）</li>
+<li>⽹卡将frame拷贝到预分配的ring buffer缓冲。</li>
+<li>⽹卡驱动程序通知内核处理，经过TCP&#x2F;IP协议栈层层解码处理。</li>
+<li>应⽤程序从socket buffer 中读取数据。</li>
+</ol>
+<h1 id="核心思路"><a href="#核心思路" class="headerlink" title="核心思路:"></a>核心思路:</h1><p>了解了收发包的原理，可以了解到丢包原因主要会涉及⽹卡设备、⽹卡驱动、内核协议栈三⼤类。以下我们将遵循“从下到上分层分析（各层可能性出现的丢包场景），然后查看关键信息，最终得出分析结果”的原则展开介绍。</p>
+<h1 id="目录–网络丢包情形概览"><a href="#目录–网络丢包情形概览" class="headerlink" title="目录–网络丢包情形概览"></a>目录–网络丢包情形概览</h1><blockquote>
+<p>硬件网卡丢包<br>网卡驱动丢包<br>以太网链路层丢包<br>网络IP层丢包<br>传输层UDP&#x2F;TCP丢包<br>应用层socket丢包</p>
+</blockquote>
+<h1 id="硬件网卡丢包"><a href="#硬件网卡丢包" class="headerlink" title="硬件网卡丢包"></a>硬件网卡丢包</h1><h2 id="Ring-Buffer溢出"><a href="#Ring-Buffer溢出" class="headerlink" title="Ring Buffer溢出:"></a>Ring Buffer溢出:</h2><p><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-17-20.png?raw=true" srcset="/img/loading.gif" lazyload><br>如图所示，物理介质上的数据帧到达后首先由NIC（网络适配器）读取，写入设备内部缓冲区Ring Buffer中，再由中断处理程序触发Softirq从中消费，Ring Buffer的大小因网卡设备而异。当网络数据包到达（生产）的速率快于内核处理（消费）的速率时，Ring Buffer很快会被填满，新来的数据包将被丢弃；</p>
+<p>查看：</p>
+<p>通过ethtool或&#x2F;proc&#x2F;net&#x2F;dev可以查看因Ring Buffer满而丢弃的包统计，在统计项中以fifo标识：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs bash"><br>$ ethtool -S eth0|grep rx_fifo<br>rx_fifo_errors: 0<br>$ <span class="hljs-built_in">cat</span> /proc/net/dev<br>Inter-|Receive | Transmitface |bytes packets errs drop fifo frame compressed<br>multicast|bytes packets errs drop fifo colls carrier compressed<br>eth0: 17253386680731 42839525880 0 0 0 0 0 244182022 14879545018057 41657801805 0 0 0 0 0 0<br></code></pre></td></tr></table></figure>
+
+<h3 id="查看eth0网卡Ring-Buffer最大值和当前设置"><a href="#查看eth0网卡Ring-Buffer最大值和当前设置" class="headerlink" title="查看eth0网卡Ring Buffer最大值和当前设置"></a>查看eth0网卡Ring Buffer最大值和当前设置</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ ethtool -g eth0<br></code></pre></td></tr></table></figure>
+
+<p>解决方案：修改网卡eth0接收与发送硬件缓存区大小</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ ethtool -G eth0 rx 4096 tx 4096<br></code></pre></td></tr></table></figure>
+
+<h2 id="网卡端口协商丢包"><a href="#网卡端口协商丢包" class="headerlink" title="网卡端口协商丢包"></a>网卡端口协商丢包</h2><ol>
+<li>查看网卡丢包统计：ethtool -S eth1&#x2F;eth0<br><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-20-10.png?raw=true" srcset="/img/loading.gif" lazyload></li>
+<li>查看网卡配置状态：ethtool eth1&#x2F;eth0<br><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-20-41.png?raw=true" srcset="/img/loading.gif" lazyload><br>主要查看网卡和上游网络设备协商速率和模式是否符合预期；</li>
+</ol>
+<p>解决方案：</p>
+<ol>
+<li>重新自协商：  ethtool -r  eth1&#x2F;eth0;</li>
+<li>如果上游不支持自协商，可以强制设置端口速率：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">ethtool -s eth1 speed 1000 duplex full autoneg off<br></code></pre></td></tr></table></figure>
+
+<p>网卡流控丢包</p>
+<ol>
+<li>查看流控统计：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">ethtool -S eth1 | grep control<br></code></pre></td></tr></table></figure>
+
+<p><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-22-40.png?raw=true" srcset="/img/loading.gif" lazyload><br>rx_flow_control_xon是在网卡的RX Buffer满或其他网卡内部的资源受限时，给交换机端口发送的开启流控的pause帧计数。对应的，tx_flow_control_xoff是在资源可用之后发送的关闭流控的pause帧计数。<br>2. 查看网络流控配置：ethtool -a eth1<br><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-23-38.png?raw=true" srcset="/img/loading.gif" lazyload><br>解决方案：关闭网卡流控</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">ethtool -A ethx autoneg off //自协商关闭<br>ethtool -A ethx tx off //发送模块关闭<br>ethtool -A ethx rx off //接收模块关闭<br></code></pre></td></tr></table></figure>
+
+<p>报文mac地址丢包<br>一般计算机网卡都工作在非混杂模式下，此时网卡只接受来自网络端口的目的地址指向自己的数据，如果报文的目的mac地址不是对端的接口的mac地址，一般都会丢包，一般这种情况很有可能是源端设置静态arp表项或者动态学习的arp表项没有及时更新，但目的端mac地址已发生变化（换了网卡），没有更新通知到源端（比如更新报文被丢失，中间交换机异常等情况）；</p>
+<p>查看：</p>
+<ol>
+<li>目的端抓包，tcpdump可以开启混杂模式，可以抓到对应的报文，然后查看mac地址；</li>
+<li>源端查看arp表或者抓包（上一跳设备），看发送的mac地址是否和下一跳目的端的mac地址一致；</li>
+</ol>
+<p>解决方案：</p>
+<ol>
+<li>刷新arp表然后发包触发arp重新学习（可能影响其他报文，增加延时，需要小心操作）；</li>
+<li>可以在源端手动设置正确的静态的arp表项；</li>
+</ol>
+<p>其他网卡异常丢包<br>这类异常比少见，但如果都不是上面哪些情况，但网卡统计里面任然有丢包计数，可以试着排查一下：<br>网卡firmware版本:<br>排查一下网卡phy芯片firmware是不是有bug，安装的版本是不是符合预期，查看 ethtool -i eth1:<br><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-25-28.png?raw=true" srcset="/img/loading.gif" lazyload><br>和厂家提case询问是不是已知问题，有没有新版本等；</p>
+<p>网线接触不良：<br>如果网卡统计里面存在crc error 计数增长，很可能是网线接触不良，可以通知网管排查一下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">ethtool -S eth0<br></code></pre></td></tr></table></figure>
+
+<p><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-26-55.png?raw=true" srcset="/img/loading.gif" lazyload></p>
+<p>解决方案：一般试着重新插拔一下网线，或者换一根网线，排查插口是否符合端口规格等;<br>报文长度丢包<br>网卡有接收正确报文长度范围，一般正常以太网报文长度范围：64-1518，发送端正常情况会填充或者分片来适配，偶尔会发生一些异常情况导致发送报文不正常丢包；</p>
+<p>查看：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs bash"><br>ethtool -S eth1|grep length_errors<br></code></pre></td></tr></table></figure>
+
+<p><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-28-12.png?raw=true" srcset="/img/loading.gif" lazyload><br>解决方案：<br>1  调整接口MTU配置，是否开启支持以太网巨帧；<br>2  发送端开启PATH MTU进行合理分片；<br>简单总结一下网卡丢包：<br><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-28-43.png?raw=true" srcset="/img/loading.gif" lazyload></p>
+<h2 id="网卡驱动丢包"><a href="#网卡驱动丢包" class="headerlink" title="网卡驱动丢包"></a>网卡驱动丢包</h2><p>查看：ifconfig eth1&#x2F;eth0 等接口<br><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-29-32.png?raw=true" srcset="/img/loading.gif" lazyload><br>1.RX errors: 表示总的收包的错误数量，还包括too-long-frames错误，Ring Buffer 溢出错误，crc 校验错误，帧同步错误，fifo overruns 以及 missed pkg 等等。</p>
+<p>2.RX dropped: 表示数据包已经进入了 Ring Buffer，但是由于内存不够等系统原因，导致在拷贝到内存的过程中被丢弃。</p>
+<p>3.RX overruns: 表示了 fifo 的 overruns，这是由于 Ring Buffer(aka Driver Queue) 传输的 IO 大于 kernel 能够处理的 IO 导致的，而 Ring Buffer 则是指在发起 IRQ 请求之前的那块 buffer。很明显，overruns 的增大意味着数据包没到 Ring Buffer 就被网卡物理层给丢弃了，而 CPU 无法即使的处理中断是造成 Ring Buffer 满的原因之一，上面那台有问题的机器就是因为 interruprs 分布的不均匀(都压在 core0)，没有做 affinity 而造成的丢包。</p>
+<ol start="4">
+<li>RX frame: 表示 misaligned 的 frames。</li>
+<li>对于 TX 的来说，出现上述 counter 增大的原因主要包括 aborted transmission, errors due to carrirer, fifo error, heartbeat erros 以及 windown error，而 collisions 则表示由于 CSMA&#x2F;CD 造成的传输中断。</li>
+</ol>
+<p>驱动溢出丢包<br>netdev_max_backlog是内核从NIC收到包后，交由协议栈（如IP、TCP）处理之前的缓冲队列。每个CPU核都有一个backlog队列，与Ring Buffer同理，当接收包的速率大于内核协议栈处理的速率时，CPU的backlog队列不断增长，当达到设定的netdev_max_backlog值时，数据包将被丢弃。</p>
+<p>查看:<br>通过查看&#x2F;proc&#x2F;net&#x2F;softnet_stat可以确定是否发生了netdev backlog队列溢出：<br><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-30-00.png?raw=true" srcset="/img/loading.gif" lazyload><br>其中：每一行代表每个CPU核的状态统计，从CPU0依次往下；每一列代表一个CPU核的各项统计：第一列代表中断处理程序收到的包总数；第二列即代表由于netdev_max_backlog队列溢出而被丢弃的包总数。从上面的输出可以看出，这台服务器统计中，并没有因为netdev_max_backlog导致的丢包。</p>
+<p>解决方案：</p>
+<p>netdev_max_backlog的默认值是1000，在高速链路上，可能会出现上述第二统计不为0的情况，可以通过修改内核参数net.core.netdev_max_backlog来解决：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs bash">$ sysctl -w net.core.netdev_max_backlog=2000<br></code></pre></td></tr></table></figure>
+
+<p>单核负载高导致丢包</p>
+<p>单核CPU软中断占有高, 导致应用没有机会收发或者收包比较慢，即使调整netdev_max_backlog队列大小仍然会一段时间后丢包，处理速度跟不上网卡接收的速度;</p>
+<p>查看：<code>mpstat -P ALL 1</code><br><img src="https://github.com/sisyphus1212/images/blob/main/mk-2022-08-29-16-31-00.png?raw=true" srcset="/img/loading.gif" lazyload><br>单核软中断占有100%，导致应用没有机会收发或者收包比较慢而丢包；</p>
+<p>解决方案：</p>
+<p>1.调整网卡RSS队列配置：</p>
+<p>查看：ethtool -x ethx；</p>
+<p>调整：ethtool -X ethx xxxx；</p>
+<p>2.看一下网卡中断配置是否均衡 cat &#x2F;proc&#x2F;interrupts</p>
+<p>调整：</p>
+<figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs awk"><br><span class="hljs-number">1</span>） irqbalance 调整；<br><span class="hljs-comment"># 查看当前运行情况</span><br>service irqbalance status<br><span class="hljs-comment"># 终止服务</span><br>service irqbalance stop<br><span class="hljs-number">2</span>） 中断绑CPU核 echo mask &gt; <span class="hljs-regexp">/proc/i</span>rq<span class="hljs-regexp">/xxx/</span>smp_affinity<br></code></pre></td></tr></table></figure>
+
+<p>3.根据CPU和网卡队列个数调整网卡多队列和RPS配置<br>-CPU大于网卡队列个数:<br>查看网卡队列 ethtool -x ethx;<br>协议栈开启RPS并设置RPS;</p>
+<figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs awk">echo <span class="hljs-variable">$mask</span>（CPU配置）&gt; <span class="hljs-regexp">/sys/</span>class<span class="hljs-regexp">/net/</span><span class="hljs-variable">$eth</span><span class="hljs-regexp">/queues/</span>rx-<span class="hljs-variable">$i</span>/rps_cpus<br>echo <span class="hljs-number">4096</span>（网卡buff）&gt; <span class="hljs-regexp">/sys/</span>class<span class="hljs-regexp">/net/</span><span class="hljs-variable">$eth</span><span class="hljs-regexp">/queues/</span>rx-<span class="hljs-variable">$i</span>/rps_flow_cnt<br><span class="hljs-number">2</span>）CPU小于网卡队列个数，绑中断就可以，可以试着关闭RPS看一下效果：<br>echo <span class="hljs-number">0</span> &gt; <span class="hljs-regexp">/sys/</span>class<span class="hljs-regexp">/net/</span>&lt;dev&gt;<span class="hljs-regexp">/queues/</span>rx-&lt;n&gt;/rps_cpus<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/linux/" class="category-chain-item">linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/" class="category-chain-item">网络开发</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E6%95%85%E9%9A%9C%E6%8E%92%E6%9F%A5/" class="category-chain-item">故障排查</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E7%BD%91%E7%BB%9C%E4%B8%A2%E5%8C%85/">#网络丢包</a>
+      
+        <a href="/tags/%E7%BD%91%E7%BB%9C%E6%95%B0%E6%8D%AE%E5%8C%85/">#网络数据包</a>
+      
+        <a href="/tags/%E6%95%B0%E6%8D%AE%E5%8C%85/">#数据包</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>网络丢包故障定位全景指南</div>
+      <div>https://sisyphus1212.github.io/2022/08/29/network/kernel网络/网络丢包故障定位全景指南/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>sisyphus</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>August 29, 2022</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>Licensed under</div>
+        <div>
+          
+            
+            
+              <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/08/29/other/windows_treminal/" title="windows terminal技巧">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">windows terminal技巧</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/08/29/network/%E5%B8%B8%E7%94%A8%E7%BD%91%E7%BB%9C%E6%95%85%E9%9A%9C%E6%8E%92%E6%9F%A5%E5%B7%A5%E5%85%B7/" title="常用网络故障排查工具">
+                        <span class="hidden-mobile">常用网络故障排查工具</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#comments', function() {
+      var light = 'github-light';
+      var dark = 'github-dark';
+      var schema = document.documentElement.getAttribute('data-user-color-scheme');
+      if (schema === 'dark') {
+        schema = dark;
+      } else {
+        schema = light;
+      }
+      window.UtterancesThemeLight = light;
+      window.UtterancesThemeDark = dark;
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'sisyphus1212/comments');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', schema);
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    })
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        被访:次数:
+        <span id="busuanzi_value_site_pv"></span>
+        
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        人数:
+        <span id="busuanzi_value_site_uv"></span>
+        
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+  <script>
+    var wechat_div = document.getElementById('wechat_show');
+    var wechatImg = document.getElementById("wechat_img");
+    wechat_click = document.getElementById('wechat_id');
+    wechat_click.onclick = function() {
+        wechat_div.style.display = "block";
+        wechatImg.src = "./img/wechat.png";
+    }
+    wechat_div.onclick = function() {
+        wechat_div.style.display = "none";
+    }
+</script>
+</body>
+</html>

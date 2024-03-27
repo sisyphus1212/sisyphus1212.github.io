@@ -1,0 +1,857 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/go.jpg">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="sisyphus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="udev 可以实现的内容:  重新为设备节点命名 通过创建链接的方式针对同一个设备提供一个持久化的命名 根据程序输出命令设备节点 设置设备节点的权限 当设备修改的时候,执行指定的脚本程序 为网络接口重新命名  rules 文件被保存在 &#x2F;etc&#x2F;udev&#x2F;rules.d 目录下&#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;&#x2F;us">
+<meta property="og:type" content="article">
+<meta property="og:title" content="udev机制实现">
+<meta property="og:url" content="https://sisyphus1212.github.io/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/udev_rules%E7%AE%80%E4%BB%8B/index.html">
+<meta property="og:site_name" content="蚂蚁没问题">
+<meta property="og:description" content="udev 可以实现的内容:  重新为设备节点命名 通过创建链接的方式针对同一个设备提供一个持久化的命名 根据程序输出命令设备节点 设置设备节点的权限 当设备修改的时候,执行指定的脚本程序 为网络接口重新命名  rules 文件被保存在 &#x2F;etc&#x2F;udev&#x2F;rules.d 目录下&#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;&#x2F;us">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-09-20-23-08-10.png?raw=true">
+<meta property="article:published_time" content="2022-09-20T16:04:02.000Z">
+<meta property="article:modified_time" content="2024-03-27T01:59:23.866Z">
+<meta property="article:author" content="sisyphus">
+<meta property="article:tag" content="kernel">
+<meta property="article:tag" content="netlink">
+<meta property="article:tag" content="linux驱动">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-09-20-23-08-10.png?raw=true">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>udev机制实现 - 蚂蚁没问题</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"sisyphus1212.github.io","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":75,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<style>
+    .box_modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgba(94, 94, 94, 0.051);
+        /* Fallback color */
+        background-color: rgba(81, 81, 81, 0.032);
+        /* Black w/ opacity */
+    }
+
+    .box_modal_content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 150px;
+    }
+    /* 添加动画 */
+
+    .box_modal_content,
+    #caption {
+        -webkit-animation-name: zoom;
+        -webkit-animation-duration: 0.6s;
+        animation-name: zoom;
+        animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+        from {
+            -webkit-transform: scale(0)
+        }
+        to {
+            -webkit-transform: scale(1)
+        }
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+        to {
+            transform: scale(1)
+        }
+    }
+</style>
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>蚂蚁没问题</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于我
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/5.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="udev机制实现"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-09-20 16:04" pubdate>
+          September 20, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          4.1k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          34 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+    <div id="wechat_show" class="box_modal" style="z-index: 999">
+        <!-- 弹窗内容 -->
+        <img class="box_modal_content" id="wechat_img">
+    </div>
+
+    <div id="sockial-link"  class="cover-social-link" style="color: var(--subtitle-color);--text-color: var(--navbar-text-color);z-index: 500;
+        position: absolute; transform: translateX(-50%); width: 200px; margin-top: -120px;
+    align-self: center; display: flex; justify-content: space-evenly; flex-wrap: nowrap; left: 50%;">
+        <a href="https://github.com/sisyphus1212/" class="tooltipped" target="_blank" data-tooltip="我的github" data-position="top" data-delay="50"> <i class="iconfont icon-github-fill"></i></a>
+        <a href="https://space.bilibili.com/228776952" class="tooltipped" target="_blank" data-tooltip="b站" data-position="top" data-delay="50"><i class="iconfont icon-bilibili-fill"></i> </a>
+        <a href="mailto:1250407709@qq.com" class="tooltipped" target="_blank" aria-label="1258407709@qq.com" data-position="top" data-delay="50"><i class="iconfont icon-mail"></i> </a>
+        <a id="wechat_id" class="tooltipped reward-link modal-trigger btn-medium waves-effect waves-light" data-tooltip="wechat" data-position="top" data-delay="50"><i class="iconfont icon-wechat-fill"></i> </a>
+        <a href="javascript:;" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50"><i class="iconfont icon-rss-fill"></i></a>
+    </div>
+  </header>
+
+  <main>
+    
+      
+<script> document.getElementById('sockial-link').style.display="none"</script>
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">udev机制实现</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>udev 可以实现的内容:</p>
+<ul>
+<li>重新为设备节点命名</li>
+<li>通过创建链接的方式针对同一个设备提供一个持久化的命名</li>
+<li>根据程序输出命令设备节点</li>
+<li>设置设备节点的权限</li>
+<li>当设备修改的时候,执行指定的脚本程序</li>
+<li>为网络接口重新命名</li>
+</ul>
+<p>rules 文件被保存在 &#x2F;etc&#x2F;udev&#x2F;rules.d 目录下<br>&#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;<br>&#x2F;usr&#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F; , &#x2F;etc 有更高优先级</p>
+<p>rules 文件以词法顺序进行解析,</p>
+<p>基本规则:<br>KERNEL-匹配内核名称<br>subsystem-匹配子系统名称<br>driver-与支持设备的驱动程序名称匹配</p>
+<p>分配系统资源:</p>
+<ul>
+<li>name:创建的设备名称</li>
+<li>symlink:创建的软链接列表</li>
+</ul>
+<p>创建的文件都在 &#x2F;dev 目录下.</p>
+<p>一个比较重要的规则:当设备找到对应的 rule 时,并不会停止该节点的处理,而是继续搜寻匹配所有的 rules 文件,<br>所以一个变动的设备可以有多次匹配.</p>
+<p>PROGRAM 关键字是执行脚本用于取名<br>RUN     关键字是执行脚本</p>
+<p><a target="_blank" rel="noopener" href="https://www.freedesktop.org/software/systemd/man/udev.html">https://www.freedesktop.org/software/systemd/man/udev.html</a><br><a target="_blank" rel="noopener" href="https://wiki.archlinux.org/index.php/Udev">https://wiki.archlinux.org/index.php/Udev</a></p>
+<p>如果手动地发送了 add,系统会自动发送 remove.</p>
+<p>&#x2F;etc&#x2F;udev&#x2F;rules.d 中的会覆盖掉 &#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F; 中的同名 rules<br>所有的 rules 文件都会按照字典顺序被加载执行.</p>
+<p>使用 netlink 应用层程序可以监听udev 的所有事件并打印出来.</p>
+<p>udevadm info $PATH       &#x2F;&#x2F; 可以查看udev数据库的信息<br>udevadm trigger $PATH    &#x2F;&#x2F; 可以触发一个 change 类型的 udev 事件,这个事件使用了udev数据库中的信息<br>事件的字符串格式为:<br>add@&#x2F;module&#x2F;kset_create_delAC<br>TION&#x3D;addDEVPATH&#x3D;&#x2F;module&#x2F;kset_create_delSUBSYSTEM&#x3D;moduleSEQNUM&#x3D;3676</p>
+<p>首先,所有发送过来的数据都是这种类型,有的还会在自定义 uevent 中添加一些字段.</p>
+<p>参考:<a target="_blank" rel="noopener" href="https://www.freedesktop.org/software/systemd/man/udev.html">https://www.freedesktop.org/software/systemd/man/udev.html</a></p>
+<p>KERNEL 对应名称,一般来说,就是 $PATH 的最后一个分量.<br>KERNELS:沿路径向上查找.</p>
+<p>SUBSYSTEM 对应 subsystem 字段.<br>SUBSYSTEMS:沿路径向上查找</p>
+<p>DEVPATH:匹配消息中的 DEVPATH.</p>
+<p>NAME:针对网络设备,匹配消息中的 NAME 字段.</p>
+<p>ENV 表示全局变量,可以直接设置全局变量,也可以直接使用全局变量,这个全局变量不是系统级别的,而是 udev rules 的全局变量.<br>注意:通过内核发送过来的键值对中的 key 会被自动设定为全局变量,比如 SUBSYSTEM,DEVPATH 等.</p>
+<p>GOTO:与 LABEL 相对应,跳转到 LABEL 处.</p>
+<p>ATTR:对应目录下的文件,ATTR{$FILE_NAME} 做判断,但是需要注意权限问题<br>如果没有权限操作的话,可以通过 ENV 来实现操作.</p>
+<p>ATTR{foo}&#x3D;&#x3D;”foo”  该语句表示判断当前文件夹下是否有 foo 文件,且其值为 foo.</p>
+<p>ATTRS:和 ATTR 差不多,只是当找不到对应的文件的时候,会根据 DEVPATH 向上找,如果父级目录找到对应的属性文件也可以匹配.</p>
+<p>DRIVER:只有在消息中设置了 DRIVER 字段的才可以进行匹配.<br>DRIVERS:沿路径向上查找.</p>
+<p>OWNER:<br>GROUP:<br>MODE:  设置权限</p>
+<p>TAG:</p>
+<p>IMPORT:导入外部的item.</p>
+<p>IMPORT{TYPE}:<br>TYPE:<br>“program”:外部程序<br>“builtin”:内部的程序<br>“file”:导入文件,格式必须是全局变量的形式<br>“cmdline”:</p>
+<p>OPTIONS:<br>link_priority&#x3D;value : 设置 link 的优先级,高优先级可以覆盖低优先级的同名link</p>
+<p>watch:追踪该文件,使用 inotify 机制,如果该文件在打开修改关闭之后,会产生一个 change event.<br>nowatch</p>
+<p>db_persist:将消息一直保存在 udev 数据库中,即使使用 udevadm info –cleanup-db 也不能删除.</p>
+<p>static_node:创建静态的设备节点.</p>
+<p>主要是通过 udev_device_new_from_syspath  获取对应的 device</p>
+<p>properties 表示属性,也是全局变量 ENV{},这个可以是从内核发出的键值对中的 key,也可以是 udevd 中设置的.</p>
+<p>所有 properties 通过 list 的形式挂在内核上.</p>
+<p>udevadm 源码:</p>
+<p>&#x2F;etc&#x2F;udev&#x2F;udev.conf  在 udev_new 中设置 log 等级.</p>
+<p>udevadm 相关的 command 被保存在全局数组 udevadm_cmds 中.</p>
+<p>udevadm info -c 清除所有的 udev db,由此源代码可以找到数据库存放位置.<br>    <strong>&#x2F;run&#x2F;udev&#x2F;data:保存数据库位置,保存的是在解析中生成的 properties,内核发过来的 propertie 保存在对应的 uvent 文件中.</strong><br>    &#x2F;run&#x2F;udev&#x2F;links:链接<br>    &#x2F;run&#x2F;udev&#x2F;tags:tags<br>    &#x2F;run&#x2F;udev&#x2F;static_node-tags:<br>    &#x2F;run&#x2F;udev&#x2F;watch:文件监测</p>
+<p>udevadm info -e 将数据库全部导出,数据库为内核发过来的信息以及 &#x2F;run&#x2F;udev&#x2F;data 中的数据.</p>
+<p>udevamd info -a 将所有匹配项打印出来,用户可以根据这些匹配项去编写 rules 文件.</p>
+<p>udevadm trigger 通过往对应的 uevent 文件中写入 add&#x2F;change.. 来实现 trigger 的操作.</p>
+<p>udevadm test,测试一个 uevent 事件的执行过程,可以看到哪些 rules 文件被解析.</p>
+<p><em><strong><strong><strong><strong><strong><strong><strong><strong><strong><strong><strong><strong><strong><strong><strong>builtin function</strong></strong></strong></strong></strong></strong></strong></strong></strong></strong></strong></strong></strong></strong></strong></em><br>src&#x2F;udev&#x2F;udev-builtin.c :</p>
+<p>usb_id:<br>通过读取一系列的文件,添加一些环境变量:<br>ID_VENDOR  ID_VENDOR_ENC  ID_VENDOR_ID  ID_MODEL<br>ID_MODEL_ENC  ID_MODEL_ID  ID_REVISION  ID_SERIAL<br>ID_SERIAL_SHORT  ID_TYPE  ID_INSTANCE  ID_BUS<br>ID_USB_INTERFACES  ID_USB_INTERFACE_NUM  ID_USB_DRIVER</p>
+<p>hwdb:<br>hwdb:搜索 &#x2F;etc&#x2F;udev&#x2F;hwdb.d 和 &#x2F;lib&#x2F;udev&#x2F;hwdb.d 中的文件,匹配其中的 hwdb 文件,将匹配上的键值对设置为全局变量.</p>
+<p>path_id:<br>根据不同的 subsystem 执行不同的程序生成 ID_PATH 和 ID_PATH_TAG 两个全局变量</p>
+<p>net_id:<br>读取 type 文件(全局搜索 eth0，找到对应目录)，type文件确定网卡的类型，ARPHRD_ETHER 或者 ARPHRD_SLIP<br>读取 ifindex 文件，<br>读取 iflink 文件，这两个文件的值需要是一样的。</p>
+<p>可以设置 DEVTYPE 为 wlan,wwan,如果没有设置,DEVTYPE 就是 eth.</p>
+<p>如果 addr_assign_type 被设置为 0,网口的 mac 地址就会从 address 文件中读.</p>
+<p>并且将 mac 地址赋值给全局变量 ID_NET_NAME_MAC<br>并根据 mac 地址的前三个字节找到 hwdb:20-OUI.hwdb 中对应的厂商,当前 imx8 的 mac 为 00:04:9f:05:93:e6,对应的 hwdb 匹配为:<br>ID_OUI_FROM_DATABASE&#x3D;Freescale Semiconductor</p>
+<p>针对不同的通信协议做不同处理,ccw(ccwgroup device)&#x2F;pci&#x2F;usb,并导出一些全局变量.</p>
+<p>网卡路径:&#x2F;sys&#x2F;devices&#x2F;platform&#x2F;30be0000.ethernet&#x2F;net&#x2F;eth0</p>
+<p>input_id:</p>
+<p>读取<br>capabilities&#x2F;ev<br>capabilities&#x2F;abs<br>capabilities&#x2F;rel<br>capabilities&#x2F;key<br>properties   &#x2F;&#x2F;父级</p>
+<p>设置 ID_INPUT_KEY 全局变量<br>设置 ID_INPUT 全局变量</p>
+<p>net_setup_link:<br>这个比较重要,通过这个接口来设置网口名称和mac地址.</p>
+<p>初始化的时候,该程序会在系统目录中找到并解析 .link 文件,<a target="_blank" rel="noopener" href="http://www.jinbuguo.com/systemd/systemd.link.html">http://www.jinbuguo.com/systemd/systemd.link.html</a>.<br>link-&gt;filename 表示 link 文件的名称.<br>程序同时会解析 link 文件，</p>
+<p>根据 DRIVER 的值设置 ID_NET_DRIVER.</p>
+<p>设置 ID_NET_LINK_FILE ID_NET_NAME</p>
+<p>设置名称,设置 mac.</p>
+<p>kmod:<br>    直接调用 load_module,加载模块.</p>
+<p>文章思路:<br>udev 简介,机制实现,以及简单的 rules 文件编写,<br>udev 从内核到用户空间的传递流程<br>udevd 分析以及內建函数分析<br>udev 相关工具分析以及使用</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/linux/" class="category-chain-item">linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/" class="category-chain-item">网络开发</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E9%A9%B1%E5%8A%A8/" class="category-chain-item">驱动</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E9%A9%B1%E5%8A%A8/udev/" class="category-chain-item">udev</a>
+  
+  
+
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/kernel/">#kernel</a>
+      
+        <a href="/tags/netlink/">#netlink</a>
+      
+        <a href="/tags/linux%E9%A9%B1%E5%8A%A8/">#linux驱动</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>udev机制实现</div>
+      <div>https://sisyphus1212.github.io/2022/09/20/linux/内核-驱动/udev/udev_rules简介/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>sisyphus</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>September 20, 2022</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>Licensed under</div>
+        <div>
+          
+            
+            
+              <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/09/20/linux/%E7%B3%BB%E7%BB%9F%E5%9F%BA%E7%A1%80/ptp%E6%97%B6%E9%92%9F%E5%90%8C%E6%AD%A5%E4%BB%8B%E7%BB%8D/" title="ptp时钟同步介绍">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">ptp时钟同步介绍</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/09/17/network/kernel%E7%BD%91%E7%BB%9C/%E5%86%85%E6%A0%B8%E6%97%A5%E5%BF%97%E6%89%93%E5%8D%B0%E9%99%90%E9%80%9F/" title="内核日志打印限速">
+                        <span class="hidden-mobile">内核日志打印限速</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#comments', function() {
+      var light = 'github-light';
+      var dark = 'github-dark';
+      var schema = document.documentElement.getAttribute('data-user-color-scheme');
+      if (schema === 'dark') {
+        schema = dark;
+      } else {
+        schema = light;
+      }
+      window.UtterancesThemeLight = light;
+      window.UtterancesThemeDark = dark;
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'sisyphus1212/comments');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', schema);
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    })
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        被访:次数:
+        <span id="busuanzi_value_site_pv"></span>
+        
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        人数:
+        <span id="busuanzi_value_site_uv"></span>
+        
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+  <script>
+    var wechat_div = document.getElementById('wechat_show');
+    var wechatImg = document.getElementById("wechat_img");
+    wechat_click = document.getElementById('wechat_id');
+    wechat_click.onclick = function() {
+        wechat_div.style.display = "block";
+        wechatImg.src = "./img/wechat.png";
+    }
+    wechat_div.onclick = function() {
+        wechat_div.style.display = "none";
+    }
+</script>
+</body>
+</html>

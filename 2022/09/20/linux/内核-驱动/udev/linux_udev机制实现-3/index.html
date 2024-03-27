@@ -1,0 +1,895 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/go.jpg">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="sisyphus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="udev builtin 接口从内核 uevent 事件机制到 netlink 通信,再到用户空间的 udevd 守护进程对内核信息的规则匹配,以及如何使用官方工具调试 udev,讲到这里,udev 的整个流程基本上已经浮出水面了. 我们可以通过阅读 &#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;50-udev-default.rules 规则文件来检验学习成果,这个">
+<meta property="og:type" content="article">
+<meta property="og:title" content="linux_udev机制实现-3">
+<meta property="og:url" content="https://sisyphus1212.github.io/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-3/index.html">
+<meta property="og:site_name" content="蚂蚁没问题">
+<meta property="og:description" content="udev builtin 接口从内核 uevent 事件机制到 netlink 通信,再到用户空间的 udevd 守护进程对内核信息的规则匹配,以及如何使用官方工具调试 udev,讲到这里,udev 的整个流程基本上已经浮出水面了. 我们可以通过阅读 &#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;50-udev-default.rules 规则文件来检验学习成果,这个">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-09-20-23-08-10.png?raw=true">
+<meta property="article:published_time" content="2022-09-20T16:04:03.000Z">
+<meta property="article:modified_time" content="2024-03-27T01:59:23.866Z">
+<meta property="article:author" content="sisyphus">
+<meta property="article:tag" content="kernel">
+<meta property="article:tag" content="netlink">
+<meta property="article:tag" content="linux驱动">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-09-20-23-08-10.png?raw=true">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>linux_udev机制实现-3 - 蚂蚁没问题</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"sisyphus1212.github.io","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":75,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<style>
+    .box_modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgba(94, 94, 94, 0.051);
+        /* Fallback color */
+        background-color: rgba(81, 81, 81, 0.032);
+        /* Black w/ opacity */
+    }
+
+    .box_modal_content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 150px;
+    }
+    /* 添加动画 */
+
+    .box_modal_content,
+    #caption {
+        -webkit-animation-name: zoom;
+        -webkit-animation-duration: 0.6s;
+        animation-name: zoom;
+        animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+        from {
+            -webkit-transform: scale(0)
+        }
+        to {
+            -webkit-transform: scale(1)
+        }
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+        to {
+            transform: scale(1)
+        }
+    }
+</style>
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>蚂蚁没问题</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于我
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/5.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="linux_udev机制实现-3"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-09-20 16:04" pubdate>
+          September 20, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          12k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          102 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+    <div id="wechat_show" class="box_modal" style="z-index: 999">
+        <!-- 弹窗内容 -->
+        <img class="box_modal_content" id="wechat_img">
+    </div>
+
+    <div id="sockial-link"  class="cover-social-link" style="color: var(--subtitle-color);--text-color: var(--navbar-text-color);z-index: 500;
+        position: absolute; transform: translateX(-50%); width: 200px; margin-top: -120px;
+    align-self: center; display: flex; justify-content: space-evenly; flex-wrap: nowrap; left: 50%;">
+        <a href="https://github.com/sisyphus1212/" class="tooltipped" target="_blank" data-tooltip="我的github" data-position="top" data-delay="50"> <i class="iconfont icon-github-fill"></i></a>
+        <a href="https://space.bilibili.com/228776952" class="tooltipped" target="_blank" data-tooltip="b站" data-position="top" data-delay="50"><i class="iconfont icon-bilibili-fill"></i> </a>
+        <a href="mailto:1250407709@qq.com" class="tooltipped" target="_blank" aria-label="1258407709@qq.com" data-position="top" data-delay="50"><i class="iconfont icon-mail"></i> </a>
+        <a id="wechat_id" class="tooltipped reward-link modal-trigger btn-medium waves-effect waves-light" data-tooltip="wechat" data-position="top" data-delay="50"><i class="iconfont icon-wechat-fill"></i> </a>
+        <a href="javascript:;" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50"><i class="iconfont icon-rss-fill"></i></a>
+    </div>
+  </header>
+
+  <main>
+    
+      
+<script> document.getElementById('sockial-link').style.display="none"</script>
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">linux_udev机制实现-3</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h2 id="udev-builtin-接口"><a href="#udev-builtin-接口" class="headerlink" title="udev builtin 接口"></a>udev builtin 接口</h2><p>从内核 uevent 事件机制到 netlink 通信,再到用户空间的 udevd 守护进程对内核信息的规则匹配,以及如何使用官方工具调试 udev,讲到这里,udev 的整个流程基本上已经浮出水面了.</p>
+<p>我们可以通过阅读 &#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;50-udev-default.rules 规则文件来检验学习成果,这个规则文件为系统提供了大量的默认规则,其中包括各种基础设备的处理,完整地阅读这个文件可以大致了解到 &#x2F;dev 下的各个设备文件,软链接,以及文件权限是如何设置的.</p>
+<p>udev 的 builtin(內建) 接口，大多数时候用于对.link文件的解析，其原理和.rules类似</p>
+<p>udev 目前被集成到了 systemd 中,所以它的源代码地址为:TODO.</p>
+<p>下载程序时要注意下载对应版本的 systemd 源码，systemd 的版本之间是不兼容的，所以在安装使用 udev 的时候，如果使用的 udevadm 客户端程序和 udevd 守护进程的版本不匹配，并不能保证它能完全正常运行。前后版本互不兼容也是 systemd 快速迭代带来的一个弊端。在 systemd 逐渐步入成熟之后这个问题应该会逐步得到解决。</p>
+<h2 id="builtin-接口"><a href="#builtin-接口" class="headerlink" title="builtin 接口"></a>builtin 接口</h2><p>首先来看看 &#x2F;lib&#x2F;udev&#x2F;rules.d&#x2F;50-udev-default.rules 中与 builtin 相关的规则：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">SUBSYSTEM==<span class="hljs-string">&quot;usb&quot;</span>, ENV&#123;DEVTYPE&#125;==<span class="hljs-string">&quot;usb_device&quot;</span>, IMPORT&#123;<span class="hljs-built_in">builtin</span>&#125;=<span class="hljs-string">&quot;usb_id&quot;</span>, IMPORT&#123;<span class="hljs-built_in">builtin</span>&#125;=<span class="hljs-string">&quot;hwdb --subsystem=usb&quot;</span><br>SUBSYSTEM==<span class="hljs-string">&quot;input&quot;</span>, ENV&#123;ID_INPUT&#125;==<span class="hljs-string">&quot;&quot;</span>, IMPORT&#123;<span class="hljs-built_in">builtin</span>&#125;=<span class="hljs-string">&quot;input_id&quot;</span><br>ENV&#123;MODALIAS&#125;!=<span class="hljs-string">&quot;&quot;</span>, IMPORT&#123;<span class="hljs-built_in">builtin</span>&#125;=<span class="hljs-string">&quot;hwdb --subsystem=<span class="hljs-variable">$env</span>&#123;SUBSYSTEM&#125;&quot;</span><br></code></pre></td></tr></table></figure>
+<p>builtin 为内置程序，需要通过 IMPORT 关键字导入，也就是 IMPORT{builtin}&#x3D;”function-name” 表示执行內建的 function-name 函数，执行內建函数会输出一系列 “key&#x3D;value” 值，这些键值对将会导入到 udev 的全局变量中，相当于在规则中使用 ENV 关键字创建全局变量。</p>
+<h2 id="builtin-源码"><a href="#builtin-源码" class="headerlink" title="builtin 源码"></a>builtin 源码</h2><p>builtin 接口的源码实现位于 systemd 源码 src&#x2F;udev&#x2F;udev-builtin.c 中，所有 udev 支持的內建接口都定义在指针数组 builtins 中：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-type">static</span> <span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">udev_builtin</span> *builtins[] = &#123;<br><span class="hljs-meta">#<span class="hljs-keyword">if</span> HAVE_BLKID</span><br>        [UDEV_BUILTIN_BLKID] = &amp;udev_builtin_blkid,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>        [UDEV_BUILTIN_BTRFS] = &amp;udev_builtin_btrfs,<br>        [UDEV_BUILTIN_HWDB] = &amp;udev_builtin_hwdb,<br>        [UDEV_BUILTIN_INPUT_ID] = &amp;udev_builtin_input_id,<br>        [UDEV_BUILTIN_KEYBOARD] = &amp;udev_builtin_keyboard,<br><span class="hljs-meta">#<span class="hljs-keyword">if</span> HAVE_KMOD</span><br>        [UDEV_BUILTIN_KMOD] = &amp;udev_builtin_kmod,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>        [UDEV_BUILTIN_NET_ID] = &amp;udev_builtin_net_id,<br>        [UDEV_BUILTIN_NET_LINK] = &amp;udev_builtin_net_setup_link,<br>        [UDEV_BUILTIN_PATH_ID] = &amp;udev_builtin_path_id,<br>        [UDEV_BUILTIN_USB_ID] = &amp;udev_builtin_usb_id,<br><span class="hljs-meta">#<span class="hljs-keyword">if</span> HAVE_ACL</span><br>        [UDEV_BUILTIN_UACCESS] = &amp;udev_builtin_uaccess,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p>通过上述贴出的源码定义可以发现，udev 支持的內建接口有：</p>
+<ul>
+<li>UDEV_BUILTIN_BLKID：块设备 ID 的处理，该功能取决于是否定义了 HAVE_BLKID</li>
+<li>UDEV_BUILTIN_BTRFS：btrfs 文件系统检查，Btrfs 是一种新型的写时复制 (CoW) Linux 文件系统，已经并入内核主线。</li>
+<li>UDEV_BUILTIN_HWDB：硬件信息数据库的查询与处理。软件上可以通过某些参数来匹配硬件信息数据库中的数据，比如通过 USB 设备的 UID&#x2F;PID 可以匹配到硬件数据库中厂商提供的额外设备信息。</li>
+<li>UDEV_BUILTIN_INPUT_ID：输入设备 ID 的处理</li>
+<li>UDEV_BUILTIN_KEYBOARD：键盘设备的处理</li>
+<li>UDEV_BUILTIN_KMOD：外部模块的处理，该功能取决于是否定义了 HAVE_KMOD</li>
+<li>UDEV_BUILTIN_NET_ID：网络 ID 的处理，比如网络设备的命名</li>
+<li>UDEV_BUILTIN_NET_LINK：网络底层链路的处理，比如网卡 mac 地址的设置</li>
+<li>UDEV_BUILTIN_PATH_ID：根据不同的子系统路径执行不同的程序逻辑，并导出变量</li>
+<li>UDEV_BUILTIN_USB_ID：USB ID 的处理</li>
+<li>UDEV_BUILTIN_UACCESS：uaccess 相关的安全处理，该功能取决于是否定义了 HAVE_ACL</li>
+</ul>
+<p>內建接口的调用方式和在 udev 规则中调用 RUN 命令执行脚本是一样的，比如：</p>
+<figure class="highlight armasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs armasm"><span class="hljs-symbol">SUBSYSTEM</span>==<span class="hljs-string">&quot;usb&quot;</span>, ENV&#123;DEVTYPE&#125;==<span class="hljs-string">&quot;usb_device&quot;</span>, <span class="hljs-meta">IMPORT</span>&#123;builtin&#125;=<span class="hljs-string">&quot;usb_id&quot;</span>, <span class="hljs-meta">IMPORT</span>&#123;builtin&#125;=<span class="hljs-string">&quot;hwdb --subsystem=usb&quot;</span><br></code></pre></td></tr></table></figure>
+
+<p>上述规则演示了当内核发生 usb 子系统相关事件，且 DEVTYPE 为 “usb_device” 时，调用內建函数 usb_id,随后再调用內建函数 hwdb，并传递命令行参数：–subsystem&#x3D;usb，可以将內建接口看成是一个完整的程序。</p>
+<p>上文中列出的內建接口列表中每个成员都是一个结构体指针，指向一个 struct udev_builtin 类型的结构体</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs csharp"><span class="hljs-keyword">struct</span> udev_builtin &#123;<br>    <span class="hljs-comment">// 名称</span><br>    <span class="hljs-keyword">const</span> <span class="hljs-built_in">char</span> *name;<br>    <span class="hljs-comment">// 真正执行的函数</span><br>    <span class="hljs-built_in">int</span> (*cmd)(<span class="hljs-keyword">struct</span> udev_device *dev, <span class="hljs-built_in">int</span> argc, <span class="hljs-built_in">char</span> *argv[], <span class="hljs-built_in">bool</span> test);<br>    ...<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p>该结构体中的 name 成员对应內建接口的名称，udev 规则中直接使用名称即可调用內建的接口，比如上述的 usb_id 正是 UDEV_BUILTIN_USB_ID 类型的內建接口。而真正执行的接口为 cmd 函数。</p>
+<p>接下来，我们简要地分析几个常用的內建接口所实现的功能，如果你对这部分的具体实现有兴趣，也可以仔细阅读相关源代码。</p>
+<h3 id="udev-builtin-hwdb"><a href="#udev-builtin-hwdb" class="headerlink" title="udev_builtin_hwdb"></a>udev_builtin_hwdb</h3><h4 id="hwdb-简介"><a href="#hwdb-简介" class="headerlink" title="hwdb 简介"></a>hwdb 简介</h4><p>硬件数据库文件(hwdb)位于操作系统发行商维护的 &#x2F;usr&#x2F;lib&#x2F;udev&#x2F;hwdb.d 目录中，以及系统管理员维护的 &#x2F;etc&#x2F;udev&#x2F;hwdb.d 目录中。所有的 hwdb 文件(无论位于哪个目录中)，统一按照文件名的字典顺序处理。对于不同目录下的同名 hwdb 文件，仅以 &#x2F;etc&#x2F;udev&#x2F;hwdb.d 目录中的那一个为准。依据这个特性，系统管理员可以使用 &#x2F;etc&#x2F;udev&#x2F;hwdb.d 目录中的自定义文件替代 &#x2F;usr&#x2F;lib&#x2F;udev&#x2F;hwdb.d 目录中的同名文件。 如果系统管理员想要屏蔽 &#x2F;usr&#x2F;lib&#x2F;udev&#x2F;hwdb.d 目录中的某个 hwdb 文件， 那么最佳做法是在 &#x2F;etc&#x2F;udev&#x2F;hwdb.d 目录中创建一个指向 &#x2F;dev&#x2F;null 的同名符号链接， 即可彻底屏蔽 &#x2F;usr&#x2F;lib&#x2F;udev&#x2F;hwdb.d 目录中的同名文件。 注意，硬件数据库文件必须以 .hwdb 作为后缀名，否则将被忽略。</p>
+<p>每个硬件数据库文件(hwdb)都包含一系列由”matche”与关联的”key-value”组成的记录。 每条记录由一个或多个用于匹配的”matche”字符串(可包含shell风格的通配符)开头， 多个”matche”字符串之间使用换行符分隔，但必须是依次紧紧相连的行(也就是中间不能出现空行)， 每一行都必须是一个完整的”matche”字符串(也就是不能将一个”matche”字符串分为两行)， <strong>多行之间是逻辑或(OR)的关系。</strong> 每一个”matche”字符串都必须顶行书写(也就是行首不能是空白字符)。</p>
+<p>“matche”行之后是一个或多个以空格开头的”key-value”行(必须以空格开头作为区分)， “key-value”行必须符合 “key&#x3D;value” 格式。 一个空白行表示一条记录结束。 以 “#” 开头的行将被视为注释而被忽略。</p>
+<p>如果有多条记录的”matche”串都匹配同一个给定的查找字符串，那么所有匹配记录中的”key-value”都将被融合在一起。如果某个”key”出现了多次，那么仅以最高优先级记录中的”value”为准(每个”key”仅允许拥有一个单独的”value”)。 对于不同硬件数据库文件(hwdb)中的记录来说，文件名的字典顺序越靠后，优先级越高； 对于同一个硬件数据库文件(hwdb)中的记录来说， 记录自身的位置越靠后，优先级越高。</p>
+<p>所有 hwdb 文件都将被 systemd-hwdb 编译为二进制格式的数据库，并存放在 &#x2F;etc&#x2F;udev&#x2F;hwdb.bin 文件中。 注意，操作系统发行商应该将预装的二进制格式的数据库存放在 &#x2F;usr&#x2F;lib&#x2F;udev&#x2F;hwdb.bin 文件中。 系统在运行时，仅会读取二进制格式的硬件数据库。</p>
+<p>下面是一个 hwdb 文件的片段,以帮助我们对 hwdb 文件建立一个基本概念:</p>
+<figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs routeros"><span class="hljs-built_in">..</span>.<br>usb:v1D6B*<br> <span class="hljs-attribute">ID_VENDOR_FROM_DATABASE</span>=Linux Foundation<br><br>usb:v1D6Bp0001*<br> <span class="hljs-attribute">ID_MODEL_FROM_DATABASE</span>=1.1 root hub<br><br>usb:v1D6Bp0002*<br> <span class="hljs-attribute">ID_MODEL_FROM_DATABASE</span>=2.0 root hub<br><br>usb:v1D6Bp0003*<br> <span class="hljs-attribute">ID_MODEL_FROM_DATABASE</span>=3.0 root hub<br><span class="hljs-built_in">..</span>.<br></code></pre></td></tr></table></figure>
+
+<p>该片段取自 &#x2F;lib&#x2F;udev&#x2F;hwdb.d&#x2F;20-usb-vendor-model.hwdb,ubuntu 18.04 中使用这个文件保存 USB 的 UID:PID 相关信息.对于一个 USB 设备而言,UID:PID 是跟随硬件的,且对于某一类设备是唯一的,因此内核可以在驱动程序中获取 USB 设备的 UID:PID 值,并将它们通过 &#x2F;sysfs 导出或者通过 netlink 发送到用户空间,udevd 则通过获取的 UID:PID 到数据库中查询,获取相应的数据库信息.</p>
+<p>比如上面贴出的 hwdb 文件片段中,VID 1D6B 是被 linux 占用的,PID 为 0001~0003 都被注册为 linux 的 root hub,当当前触发事件的 UID&#x2F;PID 与数据库中的字段匹配时,ID_MODEL_FROM_DATABASE 这个变量就被赋值为 1.1&#x2F;2.0&#x2F;3.0 root hub,并导入到 udev 的全局变量中,udevd 通过这些信息就可以判断当前 root hub 的 USB 类型,并执行一些相应的程序逻辑.</p>
+<p>udev_builtin_hwdb 內建接口被定义在 src&#x2F;udev&#x2F;udev-builtin-hwdb.c 中：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">udev_builtin</span> udev_builtin_hwdb = &#123;<br>        .name = <span class="hljs-string">&quot;hwdb&quot;</span>,<br>        .cmd = builtin_hwdb,<br>        .init = builtin_hwdb_init,<br>        ...<br>&#125;;<br></code></pre></td></tr></table></figure>
+<p>builtin_hwdb_init 为 hwdb 初始化函数,在 systemd 初始化 hwdb 时调用一次,它调用 sd_hwdb_new 函数,该函数将会读取以下文件:</p>
+<ul>
+<li>&#x2F;etc&#x2F;systemd&#x2F;hwdb&#x2F;hwdb.bin</li>
+<li>&#x2F;etc&#x2F;udev&#x2F;hwdb.bin</li>
+<li>&#x2F;usr&#x2F;lib&#x2F;systemd&#x2F;hwdb&#x2F;hwdb.bin</li>
+<li>&#x2F;lib&#x2F;systemd&#x2F;hwdb&#x2F;hwdb.bin,是否支持该文件由宏定义 HAVE_SPLIT_USR 是否被定义决定</li>
+</ul>
+<p>也就是说,hwdb 中的数据并不取决于 hwdb.d 中的各个以 .hwdb 结尾的硬件数据库文件,而是取决于这些硬件数据库文件最后编译生成的 bin 文件.</p>
+<p>在 hwdb 內建程序被调用时,主要是调用 cmd 回调函数,即 builtin_hwdb 函数:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">builtin_hwdb</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> udev_device *dev, <span class="hljs-type">int</span> argc, <span class="hljs-type">char</span> *argv[], <span class="hljs-type">bool</span> test)</span> </span>&#123;<br><br>    <span class="hljs-comment">// 命令行参数解析部分,主要是对搜索过程进行控制,支持四种命令行参数:</span><br>    <span class="hljs-comment">//     --filter,-f : 指定搜索过滤规则</span><br>    <span class="hljs-comment">//     --device,-d : 指定其它设备</span><br>    <span class="hljs-comment">//     --subsystem,-s : 指定搜索子系统</span><br>    <span class="hljs-comment">//     --lookup-prefix,-p : 指定搜索前缀</span><br><br>    <span class="hljs-comment">// 搜索函数</span><br>    <span class="hljs-keyword">if</span> (<span class="hljs-built_in">udev_builtin_hwdb_search</span>(dev, srcdev, subsystem, prefix, filter, test) &gt; <span class="hljs-number">0</span>)<br>            <span class="hljs-keyword">return</span> EXIT_SUCCESS;<br>    <span class="hljs-keyword">return</span> EXIT_FAILURE;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>搜索函数是 builtin hwdb 的核心部分,它将设备关联属性转换成 hwdb 数据中的 match 格式,再使用这些属性逐个匹配数据库中的数据.</p>
+<p>比如,对于 USB 而言,它先读取设备属性中的 idVendor(vid) 和 idProduct(pid),并对属性进行拼接,代码如下:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c++">v = <span class="hljs-built_in">udev_device_get_sysattr_value</span>(dev, <span class="hljs-string">&quot;idVendor&quot;</span>);<br>p = <span class="hljs-built_in">udev_device_get_sysattr_value</span>(dev, <span class="hljs-string">&quot;idProduct&quot;</span>);<br>vn = <span class="hljs-built_in">strtol</span>(v, <span class="hljs-literal">NULL</span>, <span class="hljs-number">16</span>);<br>pn = <span class="hljs-built_in">strtol</span>(p, <span class="hljs-literal">NULL</span>, <span class="hljs-number">16</span>);<br><span class="hljs-built_in">snprintf</span>(s, size, <span class="hljs-string">&quot;usb:v%04Xp%04X*&quot;</span>, vn, pn);<br><span class="hljs-keyword">return</span> s;<br></code></pre></td></tr></table></figure>
+<p>最后将返回结果字符串作为匹配关键字去匹配数据库,如果匹配成功,就将数据库中的数据部分(键值对)导入到 udev 全局变量中.</p>
+<h3 id="udev-builtin-net-id-udev-builtin-net-setup-link"><a href="#udev-builtin-net-id-udev-builtin-net-setup-link" class="headerlink" title="udev_builtin_net_id , udev_builtin_net_setup_link"></a>udev_builtin_net_id , udev_builtin_net_setup_link</h3><p>在平常的使用中,网络算是比较重要的部分了,通常跟它打交道的时间最多,同时,因为使用得多,网络接口问题也是非常频繁的.</p>
+<p>同样的,udev 负责网络接口的生成以及配置问题,比如网络接口名,比如:为什么 ubuntu 上默认网络接口名为 ens33,而嵌入式设备上通常是 eth0,它们是如何被生成的,又比如为什么我的两台嵌入式设备的 MAC 地址是相同的,理论上 mac 地址不应该是全球唯一的吗?除了最常见的这两个问题,网络还有很多设置问题也是通过 udev 来解决.</p>
+<p>网络相关的两个內建函数,一个是 udev_builtin_net_id,另一个是 udev_builtin_net_setup_link,前者负责硬件接口的变量导出,而后者则是真正负责网络相关参数设置的接口.</p>
+<p>udev_builtin_net_id 的定义在 src&#x2F;udev&#x2F;udev-builtin-net_id.c 中:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">udev_builtin</span> udev_builtin_net_id = &#123;<br>        .name = <span class="hljs-string">&quot;net_id&quot;</span>,<br>        .cmd = builtin_net_id,<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p>执行 IMPORT{builtin}&#x3D;”net_id” 时调用 cmd 回调函数,也就是 builtin_net_id 接口:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">builtin_net_id</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> udev_device *dev, <span class="hljs-type">int</span> argc, <span class="hljs-type">char</span> *argv[], <span class="hljs-type">bool</span> test)</span> </span>&#123;<br>    <span class="hljs-comment">// 读取网卡对应 sysfs 路径下(下文中的文件读取都是基于设备路径)的 type 文件,确定当前链路层是以太网还是 slip 网络</span><br>    <span class="hljs-comment">// 读取 ifindex 和 iflink 文件,确定两者的值一致,以确定目标设备是符合处理条件的</span><br>    <span class="hljs-comment">// 获取设备类型,设备类型可能是 wlan/wwan,以此确定命名前缀,wlan 前缀为 wl,wwan 对应 ww,以太网对应 en,而 slip 网络对应 sl.</span><br>    <span class="hljs-comment">// 获取设备 mac 地址,这个 mac 地址是通过读取 address 文件获取的,但同时要满足一个条件:addr_assign_type 文件中的值不为 0,addr_assign_type 表示 mac 地址的确定方式,这个值后文中详解.</span><br>    <span class="hljs-comment">// 将上述确定的 前缀+x+mac地址 进行字符串连接,并赋值给全局变量 ID_NET_NAME_MAC,比如:ID_NET_NAME_MAC=enx00049f0593e6</span><br>    <span class="hljs-comment">// 处理硬件接口:网络设备的接口可能是多种,比如 PCI,USB,根据硬件接口的不同导出 ID_NET_NAME_PATH 和 ID_NET_NAME_SLOT 两个变量.</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>builtin_net_id 主要工作还是导出全局变量给后续的规则使用.</p>
+<p>接下来看看核心的部分:udev_builtin_net_setup_link,通过这个接口可以直接对网络设备接口进行设置,udev_builtin_net_setup_link 接口的源代码在 src&#x2F;udev&#x2F;udev-builtin-net_setup_link.c 中:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">udev_builtin</span> udev_builtin_net_setup_link = &#123;<br>    .name = <span class="hljs-string">&quot;net_setup_link&quot;</span>,<br>    .cmd = builtin_net_setup_link,<br>    .init = builtin_net_setup_link_init,<br>    .validate = builtin_net_setup_link_validate,<br>&#125;;<br><br></code></pre></td></tr></table></figure>
+<p>init 回调函数在初始化的时候调用,它的实现是这样的:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">builtin_net_setup_link_init</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> udev *udev)</span> </span>&#123;<br>    <span class="hljs-comment">// 初始化上下文结构,准备执行环境</span><br>    ...<br>    <span class="hljs-built_in">link_config_load</span>(ctx);<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>link_config_load 是初始化阶段的核心函数,这个函数主要是加载以及解析配置文件,对应的配置文件都是以 .link 结尾,分布在指定的目录中,这些目录有: &#x2F;etc&#x2F;system&#x2F;network,&#x2F;run&#x2F;systemd&#x2F;network,&#x2F;usr&#x2F;lib&#x2F;systemd&#x2F;network,lib&#x2F;systemd&#x2F;network, 这些 .link 配置文件用于控制网络接口的各项参数,link 文件的相关信息可以参考文档:</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.freedesktop.org/software/systemd/man/systemd.link.html">systemd.link</a></li>
+<li><a target="_blank" rel="noopener" href="http://www.jinbuguo.com/systemd/systemd.link.html">systemd.link 中文手册</a></li>
+</ul>
+<p>如果你没有更改过你的系统,大概率在 &#x2F;lib&#x2F;systemd&#x2F;network 下有一个 99-default.link 文件,这是系统对网络接口默认的配置,和 systemd 的配置语法一样,配置文件支持多个小节,每个小节有多个选项,而 link_config_load 对 .link 文件的解析结果将保存在 link_config 的结构体中,以备后续使用.</p>
+<p>初始化只有一次,当每次执行 IMPORT{builtin}&#x3D;”net_setup_link” 时,将会调用到 cmd 回调函数,即 builtin_net_setup_link:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-function"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title">builtin_net_setup_link</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> udev_device *dev, <span class="hljs-type">int</span> argc, <span class="hljs-type">char</span> **argv, <span class="hljs-type">bool</span> test)</span> </span>&#123;<br>    <span class="hljs-comment">// 获取设备的 driver 属性,即该设备在内核中的 driver 名称.并赋值给全局变量 ID_NET_DRIVER,需要注意的是,内核并不会对所有的网络接口都导出 driver 属性. 需要通过内核到用户空间的 nelink 信息确定.</span><br>    <span class="hljs-comment">// 上文中初始化过程中解析 .link 文件会生成 link_config 结构体.使用当前网络设备的信息与 .link 文件中进行匹配,如果匹配成功,就获取对应的 link_config 结构体,作为配置参数.(具体的匹配需要参考 .link 文件中的 [match] 小节中的配置项).</span><br><br>    <span class="hljs-comment">// 应用所有配置.这个函数主要操作网络接口有:speed,wol,mac,name 等接口配置,需要注意的是,在此之前当前网络接口的命名和 mac 地址都存在默认的值,mac 的默认值为内核导出的 address 文件值,接口名为内核中导出的网络接口名,比如 eth0 .link 配置文件只是在默认值的基础上进行修改,如果没有匹配成功的 .link 文件,网络接口也是可以以默认参数存在并正常使用.</span><br><br>    <span class="hljs-built_in">link_config_apply</span>(ctx, link, dev, &amp;name);<br>        <span class="hljs-comment">/*</span><br><span class="hljs-comment">        根据 .link 文件的解析结果设置的 speed 设置当前网络接口的 speed.</span><br><span class="hljs-comment">        设置 wol,wol 为 wake on line,远程唤醒</span><br><span class="hljs-comment">        获取并验证 ifindex 文件内容并验证其值</span><br><span class="hljs-comment"></span><br><span class="hljs-comment">        获取 .link 文件中指定的 NamePolicy,翻译过来就是命名策略,命名策略一共有以下多种:</span><br><span class="hljs-comment">            kernel:由内核设置固定的名称,如果设置了该值,且 name_assign_type 文件中的值为 2,3,4,其它所有的策略设置都会失效.</span><br><span class="hljs-comment">            database:基于网卡的 ID_NET_NAME_FROM_DATABASE 属性值(来自于udev硬件数据库)设置网卡的名称。</span><br><span class="hljs-comment">            onboard:基于网卡的 ID_NET_NAME_ONBOARD 属性值(来自于板载网卡固件)设置网卡的名称。</span><br><span class="hljs-comment">            slot:基于网卡的 ID_NET_NAME_SLOT 属性值(来自于可插拔网卡固件)设置网卡的名称。</span><br><span class="hljs-comment">            path:基于网卡的 ID_NET_NAME_PATH 属性值(来自于网卡的总线位置)设置网卡的名称。</span><br><span class="hljs-comment">            mac:基于网卡的 ID_NET_NAME_MAC 属性值(来自于网卡的固定MAC地址)设置网卡的名称。</span><br><span class="hljs-comment">            keep:如果网卡已经被空户空间命名(创建新设备时命名或对已有设备重命名)， 那么就保留它(不进行重命名操作)。</span><br><span class="hljs-comment">        在 .link 文件中,可以设置多种命名策略的组合,优先级从先到后,如果前面的策略被成功实施,后续的策略就会被省略,默认的 /lib/systemd/network/99-default.link 中就指定了 NamePolicy=kernel database onboard slot path.</span><br><span class="hljs-comment"></span><br><span class="hljs-comment">        同时,前面的策略并不一定被成功实施,比如,设置为 kernel 时,需要在 .link 配置文件中同时设置 Name= 选项,又比如设置为 database 时,ID_NET_NAME_FROM_DATABASE 不能为空,为空表示策略实施失败,尝试下一个,直到 new_name 不为空.</span><br><span class="hljs-comment"></span><br><span class="hljs-comment">        对于 mac 的设置,同样依赖于 .link 文件中的 MACAddressPolicy= 选项,mac 策略支持两种:</span><br><span class="hljs-comment">            persistent:内核确定的固定 mac 地址.</span><br><span class="hljs-comment">            random:随机生成的 mac 地址.</span><br><span class="hljs-comment">            none:无条件使用内核提供的 mac 地址</span><br><span class="hljs-comment">        同时需要结合 addr_assign_type 文件中的值,addr_assign_type 是内核导出的文件,用户空间的设置需要和内核适配.比如配置文件中设置为 random,但是内核导出的  addr_assign_type 文件中值为 0,代表 persistent,则不会设置.</span><br><span class="hljs-comment">        同时,当没有指定 mac policy 时,直接在 .links 文件中指定 MACAddress= 也可以指定 mac 地址,不够要符合 mac 地址的格式规范.</span><br><span class="hljs-comment">        */</span><br>&#125;<br></code></pre></td></tr></table></figure>
+
+
+<h3 id="udev-builtin-path-id"><a href="#udev-builtin-path-id" class="headerlink" title="udev_builtin_path_id"></a>udev_builtin_path_id</h3><p>UDEV_BUILTIN_PATH_ID 这个內建接口主要作用是找到并导出当前设备在 &#x2F;sys&#x2F;devices 中的存在路径,它的源码位于:src&#x2F;udev&#x2F;udev-builtin-path_id.c 中:</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">udev_builtin</span> udev_builtin_path_id = &#123;<br>        .name = <span class="hljs-string">&quot;path_id&quot;</span>,<br>        .cmd = builtin_path_id,<br>        ...<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p>同样的,在执行 IMPORT{builtin}&#x3D;”path_id” 时会调用到 builtin_path_id 函数,这个函数实现比较简单,从当前节点向上索引,一级一级地找到 subsystem 所属的父级目录,并赋值给 ID_PATH,比如:ID_PATH&#x3D;platform-4a100000.ethernet,其中 - 表示目录分隔符 &#x2F; 的替换。</p>
+<h3 id="udev-builtin-usb-id"><a href="#udev-builtin-usb-id" class="headerlink" title="udev_builtin_usb_id"></a>udev_builtin_usb_id</h3><p>udev_builtin_usb_id 这个內建接口负责导出 usb 设备的相关信息，具体的定义在 src&#x2F;udev&#x2F;udev-builtin-usb_id.c 中：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs c++"><span class="hljs-type">const</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">udev_builtin</span> udev_builtin_usb_id = &#123;<br>        .name = <span class="hljs-string">&quot;usb_id&quot;</span>,<br>        .cmd = builtin_usb_id,<br>        ...<br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<p>当执行 IMPORT{builtin}&#x3D;”usb_id” 时会调用到 cmd 回调函数，即 builtin_usb_id,builtin_usb_id 这个函数的实现比较繁琐，但是总结起来又比较简单：就是通过读取设备目录下的各个属性文件，然后将这些属性文件中的数据复制给全局变量，然后导入到 udev 中。这些全局变量以及对应的属性文件如下：</p>
+<ul>
+<li>ID_VENDOR 的值源于 vendor 或 manufacturer</li>
+<li>ID_VENDOR_ENC 的值源于 vendor 或 manufacturer</li>
+<li>ID_VENDOR_ID 的值源于 idVendor</li>
+<li>ID_MODEL 的值源于 model 或 product</li>
+<li>ID_MODEL_ENC 的值源于 model 或 product</li>
+<li>ID_MODEL_ID 的值源于 idProduct</li>
+<li>ID_REVISION 的值源于 bcdDevice</li>
+<li>ID_SERIAL 的值源于 serial</li>
+<li>…. 更多全局变量的导出可以参考源码。</li>
+</ul>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>內建接口通常完成两项工作:</p>
+<ul>
+<li>完成特定的工作,比如载入模块,比如设置网络接口名称,mac地址.</li>
+<li>导出一些全局变量,这些全局变量可以在后续的规则中进行匹配以及使用,本章中并不对所有导出的变量进行持续跟踪,如果你想了解这些变量最后是如何使用的,可以参考我前面章节中介绍的 udev 机制以及 .rules 文件编写规则,对系统中的 udev 行为进行分析.</li>
+</ul>
+<p>需要注意的是，这篇文章并没有仔细地去分析每个內建接口的实现细节，而只是将內建接口的概念、源代码地址以及主要的內建接口进行了概括，如果各位有兴趣，可以下载源码进行研究。</p>
+<p>&#x2F;sys 下的文件是否可以通过规则修改.<br>是不是同时设置 policy&#x3D;kernel 和 name&#x3D; 才会指定对应的网卡名称.<br>如果设置了该值,且 name_assign_type 文件中的值为 2,3,4,其它所有的策略设置都会失效.<br>kernel:由内核设置固定的名称,如果设置了该值,且 name_assign_type 文件中的值为 2,3,4,其它所有的策略设置都会失效.</p>
+<p>参考:<a target="_blank" rel="noopener" href="http://www.jinbuguo.com/systemd/hwdb.html">http://www.jinbuguo.com/systemd/hwdb.html</a></p>
+<p>udevadm test 使用.</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/linux/" class="category-chain-item">linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/" class="category-chain-item">网络开发</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E9%A9%B1%E5%8A%A8/" class="category-chain-item">驱动</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/%E9%A9%B1%E5%8A%A8/udev/" class="category-chain-item">udev</a>
+  
+  
+
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/kernel/">#kernel</a>
+      
+        <a href="/tags/netlink/">#netlink</a>
+      
+        <a href="/tags/linux%E9%A9%B1%E5%8A%A8/">#linux驱动</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>linux_udev机制实现-3</div>
+      <div>https://sisyphus1212.github.io/2022/09/20/linux/内核-驱动/udev/linux_udev机制实现-3/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>sisyphus</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>September 20, 2022</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>Licensed under</div>
+        <div>
+          
+            
+            
+              <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-1/" title="linux_udev机制实现-1">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">linux_udev机制实现-1</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/09/20/network/p4%E7%A8%8B%E5%BA%8F%E7%9A%84%E8%B5%84%E6%BA%90%E4%BC%98%E5%8C%96%E6%8C%87%E5%8D%97/" title="p4程序的资源优化指南">
+                        <span class="hidden-mobile">p4程序的资源优化指南</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#comments', function() {
+      var light = 'github-light';
+      var dark = 'github-dark';
+      var schema = document.documentElement.getAttribute('data-user-color-scheme');
+      if (schema === 'dark') {
+        schema = dark;
+      } else {
+        schema = light;
+      }
+      window.UtterancesThemeLight = light;
+      window.UtterancesThemeDark = dark;
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'sisyphus1212/comments');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', schema);
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    })
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        被访:次数:
+        <span id="busuanzi_value_site_pv"></span>
+        
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        人数:
+        <span id="busuanzi_value_site_uv"></span>
+        
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+  <script>
+    var wechat_div = document.getElementById('wechat_show');
+    var wechatImg = document.getElementById("wechat_img");
+    wechat_click = document.getElementById('wechat_id');
+    wechat_click.onclick = function() {
+        wechat_div.style.display = "block";
+        wechatImg.src = "./img/wechat.png";
+    }
+    wechat_div.onclick = function() {
+        wechat_div.style.display = "none";
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,789 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/go.jpg">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="sisyphus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="ethtool 支持 dump 网卡的寄存器最新版 ethtool 支持如下网卡的 dump： 12345678910111213141516171819202122232425262728293031323334353637383940static const struct &amp;#123;	const char *name;	int (*func)(struct ethtool_drvinfo *">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ethtool 代码架构">
+<meta property="og:url" content="https://sisyphus1212.github.io/2023/11/03/network/ethtool/ethtool_dump_%E7%BD%91%E5%8D%A1%E5%AF%84%E5%AD%98%E5%99%A8/index.html">
+<meta property="og:site_name" content="蚂蚁没问题">
+<meta property="og:description" content="ethtool 支持 dump 网卡的寄存器最新版 ethtool 支持如下网卡的 dump： 12345678910111213141516171819202122232425262728293031323334353637383940static const struct &amp;#123;	const char *name;	int (*func)(struct ethtool_drvinfo *">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2023-11-03T15:11:45.000Z">
+<meta property="article:modified_time" content="2024-03-27T01:59:23.862Z">
+<meta property="article:author" content="sisyphus">
+<meta property="article:tag" content="网卡">
+<meta property="article:tag" content="ethool">
+<meta property="article:tag" content="linux内核网络">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>ethtool 代码架构 - 蚂蚁没问题</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"sisyphus1212.github.io","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":75,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<style>
+    .box_modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgba(94, 94, 94, 0.051);
+        /* Fallback color */
+        background-color: rgba(81, 81, 81, 0.032);
+        /* Black w/ opacity */
+    }
+
+    .box_modal_content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 150px;
+    }
+    /* 添加动画 */
+
+    .box_modal_content,
+    #caption {
+        -webkit-animation-name: zoom;
+        -webkit-animation-duration: 0.6s;
+        animation-name: zoom;
+        animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+        from {
+            -webkit-transform: scale(0)
+        }
+        to {
+            -webkit-transform: scale(1)
+        }
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+        to {
+            transform: scale(1)
+        }
+    }
+</style>
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>蚂蚁没问题</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于我
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/5.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="ethtool 代码架构"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2023-11-03 15:11" pubdate>
+          November 3, 2023 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          4k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          34 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+    <div id="wechat_show" class="box_modal" style="z-index: 999">
+        <!-- 弹窗内容 -->
+        <img class="box_modal_content" id="wechat_img">
+    </div>
+
+    <div id="sockial-link"  class="cover-social-link" style="color: var(--subtitle-color);--text-color: var(--navbar-text-color);z-index: 500;
+        position: absolute; transform: translateX(-50%); width: 200px; margin-top: -120px;
+    align-self: center; display: flex; justify-content: space-evenly; flex-wrap: nowrap; left: 50%;">
+        <a href="https://github.com/sisyphus1212/" class="tooltipped" target="_blank" data-tooltip="我的github" data-position="top" data-delay="50"> <i class="iconfont icon-github-fill"></i></a>
+        <a href="https://space.bilibili.com/228776952" class="tooltipped" target="_blank" data-tooltip="b站" data-position="top" data-delay="50"><i class="iconfont icon-bilibili-fill"></i> </a>
+        <a href="mailto:1250407709@qq.com" class="tooltipped" target="_blank" aria-label="1258407709@qq.com" data-position="top" data-delay="50"><i class="iconfont icon-mail"></i> </a>
+        <a id="wechat_id" class="tooltipped reward-link modal-trigger btn-medium waves-effect waves-light" data-tooltip="wechat" data-position="top" data-delay="50"><i class="iconfont icon-wechat-fill"></i> </a>
+        <a href="javascript:;" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50"><i class="iconfont icon-rss-fill"></i></a>
+    </div>
+  </header>
+
+  <main>
+    
+      
+<script> document.getElementById('sockial-link').style.display="none"</script>
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">ethtool 代码架构</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="ethtool-支持-dump-网卡的寄存器"><a href="#ethtool-支持-dump-网卡的寄存器" class="headerlink" title="ethtool 支持 dump 网卡的寄存器"></a>ethtool 支持 dump 网卡的寄存器</h1><p>最新版 ethtool 支持如下网卡的 dump：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">const</span> <span class="hljs-class"><span class="hljs-keyword">struct</span> &#123;</span><br>	<span class="hljs-type">const</span> <span class="hljs-type">char</span> *name;<br>	<span class="hljs-type">int</span> (*func)(<span class="hljs-keyword">struct</span> ethtool_drvinfo *info, <span class="hljs-keyword">struct</span> ethtool_regs *regs);<br><br>&#125; driver_list[] = &#123;<br><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> ETHTOOL_ENABLE_PRETTY_DUMP</span><br>	&#123; <span class="hljs-string">&quot;8139cp&quot;</span>, realtek_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;8139too&quot;</span>, realtek_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;r8169&quot;</span>, realtek_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;de2104x&quot;</span>, de2104x_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;e1000&quot;</span>, e1000_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;e1000e&quot;</span>, e1000_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;igb&quot;</span>, igb_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;ixgb&quot;</span>, ixgb_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;ixgbe&quot;</span>, ixgbe_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;ixgbevf&quot;</span>, ixgbevf_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;natsemi&quot;</span>, natsemi_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;e100&quot;</span>, e100_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;amd8111e&quot;</span>, amd8111e_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;pcnet32&quot;</span>, pcnet32_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;fec_8xx&quot;</span>, fec_8xx_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;ibm_emac&quot;</span>, ibm_emac_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;tg3&quot;</span>, tg3_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;skge&quot;</span>, skge_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;sky2&quot;</span>, sky2_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;vioc&quot;</span>, vioc_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;smsc911x&quot;</span>, smsc911x_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;at76c50x-usb&quot;</span>, at76c50x_usb_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;sfc&quot;</span>, sfc_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;st_mac100&quot;</span>, st_mac100_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;st_gmac&quot;</span>, st_gmac_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;et131x&quot;</span>, et131x_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;altera_tse&quot;</span>, altera_tse_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;vmxnet3&quot;</span>, vmxnet3_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;fjes&quot;</span>, fjes_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;lan78xx&quot;</span>, lan78xx_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;dsa&quot;</span>, dsa_dump_regs &#125;,<br>	&#123; <span class="hljs-string">&quot;fec&quot;</span>, fec_dump_regs &#125;,<br><span class="hljs-meta">#<span class="hljs-keyword">endif</span></span><br>&#125;;<br></code></pre></td></tr></table></figure>
+
+<h2 id="ethtool-dump-网卡寄存器的主要工作原理"><a href="#ethtool-dump-网卡寄存器的主要工作原理" class="headerlink" title="ethtool dump 网卡寄存器的主要工作原理"></a>ethtool dump 网卡寄存器的主要工作原理</h2><ol>
+<li>ethtool 中首先通过 ioctl 调用底层驱动实现的 <strong>get_regs_len</strong> 函数，获取到 dump 寄存器的大小</li>
+<li>ethtool 使用获取到的寄存器空间大小申请内存空间</li>
+<li>调用驱动中实现的 get_regs 函数来读取寄存器信息，并填充到之前申请的内存空间中</li>
+<li>最后 在ethtool 中调用适配的不同网卡驱动的 dump_regs 函数来解析并打印读取到的寄存器值</li>
+</ol>
+<h2 id="ethtool-c-中解析获取到的寄存器值的函数"><a href="#ethtool-c-中解析获取到的寄存器值的函数" class="headerlink" title="ethtool.c 中解析获取到的寄存器值的函数"></a>ethtool.c 中解析获取到的寄存器值的函数</h2><p>ethtool.c 中的 dump_regs 函数完成<strong>解析</strong> dump 出来的寄存器信息的功能。</p>
+<p>对于 gregs_dump_hex 为 0 的情况，它会<strong>遍历 driver_list</strong> 列表，这就是上面我列出来的那个很长的表喽，它会用 info-&gt;driver 中的<strong>驱动名称****匹配</strong> <strong>driver_list</strong>，匹配到了一个则<strong>调用相应的 func 函数</strong>来完成寄存器解析工作，因为可能存在<strong>嵌套的 regs 结构体内容</strong>，这个过程会不断的<strong>递归执行</strong>。</p>
+<p>对于这种没有单独的解析函数的网卡，ethtool 中将会调用 dump_hex 以十六进制格式进行输出。</p>
+<p>dump_regs 函数源码如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">int</span> <span class="hljs-title function_">dump_regs</span><span class="hljs-params">(<span class="hljs-type">int</span> gregs_dump_raw, <span class="hljs-type">int</span> gregs_dump_hex,</span><br><span class="hljs-params">		     <span class="hljs-keyword">struct</span> ethtool_drvinfo *info, <span class="hljs-keyword">struct</span> ethtool_regs *regs)</span><br>&#123;<br>	<span class="hljs-type">int</span> i;<br><br>	<span class="hljs-keyword">if</span> (gregs_dump_raw) &#123;<br>		fwrite(regs-&gt;data, regs-&gt;len, <span class="hljs-number">1</span>, <span class="hljs-built_in">stdout</span>);<br>		<span class="hljs-keyword">goto</span> nested;<br>	&#125;<br><br>	<span class="hljs-keyword">if</span> (!gregs_dump_hex)<br>		<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; ARRAY_SIZE(driver_list); i++)<br>			<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">strncmp</span>(driver_list[i].name, info-&gt;driver,<br>				     ETHTOOL_BUSINFO_LEN)) &#123;<br>				<span class="hljs-keyword">if</span> (driver_list[i].func(info, regs) == <span class="hljs-number">0</span>)<br>					<span class="hljs-keyword">goto</span> nested;<br>				<span class="hljs-comment">/* This version (or some other</span><br><span class="hljs-comment">				 * variation in the dump format) is</span><br><span class="hljs-comment">				 * not handled; fall back to hex</span><br><span class="hljs-comment">				 */</span><br>				<span class="hljs-keyword">break</span>;<br>			&#125;<br><br>	dump_hex(<span class="hljs-built_in">stdout</span>, regs-&gt;data, regs-&gt;len, <span class="hljs-number">0</span>);<br><br>nested:<br>	<span class="hljs-comment">/* Recurse dump if some drvinfo and regs structures are nested */</span><br>	<span class="hljs-keyword">if</span> (info-&gt;regdump_len &gt; regs-&gt;len + <span class="hljs-keyword">sizeof</span>(*info) + <span class="hljs-keyword">sizeof</span>(*regs)) &#123;<br>		info = (<span class="hljs-keyword">struct</span> ethtool_drvinfo *)(&amp;regs-&gt;data[<span class="hljs-number">0</span>] + regs-&gt;len);<br>		regs = (<span class="hljs-keyword">struct</span> ethtool_regs *)(&amp;regs-&gt;data[<span class="hljs-number">0</span>] + regs-&gt;len + <span class="hljs-keyword">sizeof</span>(*info));<br><br>		<span class="hljs-keyword">return</span> dump_regs(gregs_dump_raw, gregs_dump_hex, info, regs);<br>	&#125;<br><br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="ixgbe-内核态驱动中-dump-寄存器的实现参考"><a href="#ixgbe-内核态驱动中-dump-寄存器的实现参考" class="headerlink" title="ixgbe 内核态驱动中 dump 寄存器的实现参考"></a>ixgbe 内核态驱动中 dump 寄存器的实现参考</h2><p>ixgbe 内核态驱动中 ixgbe_get_regs 函数的部分实现如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">static</span> <span class="hljs-type">void</span> <span class="hljs-title function_">ixgbe_get_regs</span><span class="hljs-params">(<span class="hljs-keyword">struct</span> net_device *netdev, <span class="hljs-keyword">struct</span> ethtool_regs *regs,</span><br><span class="hljs-params">			   <span class="hljs-type">void</span> *p)</span><br>&#123;<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">ixgbe_adapter</span> *<span class="hljs-title">adapter</span> =</span> netdev_priv(netdev);<br>	<span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">ixgbe_hw</span> *<span class="hljs-title">hw</span> =</span> &amp;adapter-&gt;hw;<br>	u32 *regs_buff = p;<br>	u8 i;<br><br>	<span class="hljs-built_in">memset</span>(p, <span class="hljs-number">0</span>, IXGBE_REGS_LEN * <span class="hljs-keyword">sizeof</span>(u32));<br><br>	regs-&gt;version = (<span class="hljs-number">1</span> &lt;&lt; <span class="hljs-number">24</span>) | hw-&gt;revision_id &lt;&lt; <span class="hljs-number">16</span> | hw-&gt;device_id;<br><br>	<span class="hljs-comment">/* General Registers */</span><br>	regs_buff[<span class="hljs-number">0</span>] = IXGBE_READ_REG(hw, IXGBE_CTRL);<br>	<span class="hljs-comment">//printk(KERN_DEBUG &quot;ixgbe_get_regs_3\n&quot;);</span><br>	regs_buff[<span class="hljs-number">1</span>] = IXGBE_READ_REG(hw, IXGBE_STATUS);<br>	regs_buff[<span class="hljs-number">2</span>] = IXGBE_READ_REG(hw, IXGBE_CTRL_EXT);<br>	regs_buff[<span class="hljs-number">3</span>] = IXGBE_READ_REG(hw, IXGBE_ESDP);<br>	regs_buff[<span class="hljs-number">4</span>] = IXGBE_READ_REG(hw, IXGBE_EODSDP);<br>	regs_buff[<span class="hljs-number">5</span>] = IXGBE_READ_REG(hw, IXGBE_LEDCTL);<br>	regs_buff[<span class="hljs-number">6</span>] = IXGBE_READ_REG(hw, IXGBE_FRTIMER);<br></code></pre></td></tr></table></figure>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/linux/" class="category-chain-item">linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E5%86%85%E6%A0%B8%E7%BD%91%E7%BB%9C/" class="category-chain-item">内核网络</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E5%86%85%E6%A0%B8%E7%BD%91%E7%BB%9C/%E7%BD%91%E5%8D%A1%E9%A9%B1%E5%8A%A8/" class="category-chain-item">网卡驱动</a>
+  
+  
+
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/%E7%BD%91%E5%8D%A1/">#网卡</a>
+      
+        <a href="/tags/ethool/">#ethool</a>
+      
+        <a href="/tags/linux%E5%86%85%E6%A0%B8%E7%BD%91%E7%BB%9C/">#linux内核网络</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>ethtool 代码架构</div>
+      <div>https://sisyphus1212.github.io/2023/11/03/network/ethtool/ethtool_dump_网卡寄存器/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>sisyphus</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>November 3, 2023</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>Licensed under</div>
+        <div>
+          
+            
+            
+              <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2023/12/21/dpdk/vhost_user_virtio_net%E5%90%8E%E7%AB%AF%E9%80%BB%E8%BE%91/" title="dpdk 编译">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">dpdk 编译</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2023/11/01/other/c%E8%AF%AD%E8%A8%80%E6%99%BA%E8%83%BD%E6%8C%87%E9%92%88/" title="c语言-智能指针的用法">
+                        <span class="hidden-mobile">c语言-智能指针的用法</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#comments', function() {
+      var light = 'github-light';
+      var dark = 'github-dark';
+      var schema = document.documentElement.getAttribute('data-user-color-scheme');
+      if (schema === 'dark') {
+        schema = dark;
+      } else {
+        schema = light;
+      }
+      window.UtterancesThemeLight = light;
+      window.UtterancesThemeDark = dark;
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'sisyphus1212/comments');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', schema);
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    })
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        被访:次数:
+        <span id="busuanzi_value_site_pv"></span>
+        
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        人数:
+        <span id="busuanzi_value_site_uv"></span>
+        
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+  <script>
+    var wechat_div = document.getElementById('wechat_show');
+    var wechatImg = document.getElementById("wechat_img");
+    wechat_click = document.getElementById('wechat_id');
+    wechat_click.onclick = function() {
+        wechat_div.style.display = "block";
+        wechatImg.src = "./img/wechat.png";
+    }
+    wechat_div.onclick = function() {
+        wechat_div.style.display = "none";
+    }
+</script>
+</body>
+</html>

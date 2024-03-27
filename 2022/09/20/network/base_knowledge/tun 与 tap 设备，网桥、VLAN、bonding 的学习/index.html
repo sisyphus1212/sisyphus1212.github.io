@@ -1,0 +1,845 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/go.jpg">
+  <link rel="icon" href="/img/avatar.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="sisyphus">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="tun 与 tap 设备，网桥、VLAN、bonding 的学习tun 与 tap 设备这两个都是虚拟网络设备，tun 设备用来实现三层隧道（三层 ip 数据报），tap 设备用来实现二层隧道（二层以太网数据帧）。 tun 示例程序： 1234567891011121314151617181920212223242526272829303132333435363738394041424344454">
+<meta property="og:type" content="article">
+<meta property="og:title" content="linux内核网络设备">
+<meta property="og:url" content="https://sisyphus1212.github.io/2022/09/20/network/base_knowledge/tun%20%E4%B8%8E%20tap%20%E8%AE%BE%E5%A4%87%EF%BC%8C%E7%BD%91%E6%A1%A5%E3%80%81VLAN%E3%80%81bonding%20%E7%9A%84%E5%AD%A6%E4%B9%A0/index.html">
+<meta property="og:site_name" content="蚂蚁没问题">
+<meta property="og:description" content="tun 与 tap 设备，网桥、VLAN、bonding 的学习tun 与 tap 设备这两个都是虚拟网络设备，tun 设备用来实现三层隧道（三层 ip 数据报），tap 设备用来实现二层隧道（二层以太网数据帧）。 tun 示例程序： 1234567891011121314151617181920212223242526272829303132333435363738394041424344454">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-09-20-23-08-10.png?raw=true">
+<meta property="article:published_time" content="2022-09-20T16:04:03.000Z">
+<meta property="article:modified_time" content="2024-03-27T01:59:23.862Z">
+<meta property="article:author" content="sisyphus">
+<meta property="article:tag" content="kernel network">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://github.com/sisyphus1212/images/blob/main/mk-2022-09-20-23-08-10.png?raw=true">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>linux内核网络设备 - 蚂蚁没问题</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"sisyphus1212.github.io","root":"/","version":"1.9.2","typing":{"enable":true,"typeSpeed":75,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.2.0"></head>
+
+
+<style>
+    .box_modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        padding-top: 100px;
+        /* Location of the box */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgba(94, 94, 94, 0.051);
+        /* Fallback color */
+        background-color: rgba(81, 81, 81, 0.032);
+        /* Black w/ opacity */
+    }
+
+    .box_modal_content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 150px;
+    }
+    /* 添加动画 */
+
+    .box_modal_content,
+    #caption {
+        -webkit-animation-name: zoom;
+        -webkit-animation-duration: 0.6s;
+        animation-name: zoom;
+        animation-duration: 0.6s;
+    }
+
+    @-webkit-keyframes zoom {
+        from {
+            -webkit-transform: scale(0)
+        }
+        to {
+            -webkit-transform: scale(1)
+        }
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+        to {
+            transform: scale(1)
+        }
+    }
+</style>
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>蚂蚁没问题</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于我
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/5.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="linux内核网络设备"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-09-20 16:04" pubdate>
+          September 20, 2022 pm
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          11k words
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          94 mins
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+    <div id="wechat_show" class="box_modal" style="z-index: 999">
+        <!-- 弹窗内容 -->
+        <img class="box_modal_content" id="wechat_img">
+    </div>
+
+    <div id="sockial-link"  class="cover-social-link" style="color: var(--subtitle-color);--text-color: var(--navbar-text-color);z-index: 500;
+        position: absolute; transform: translateX(-50%); width: 200px; margin-top: -120px;
+    align-self: center; display: flex; justify-content: space-evenly; flex-wrap: nowrap; left: 50%;">
+        <a href="https://github.com/sisyphus1212/" class="tooltipped" target="_blank" data-tooltip="我的github" data-position="top" data-delay="50"> <i class="iconfont icon-github-fill"></i></a>
+        <a href="https://space.bilibili.com/228776952" class="tooltipped" target="_blank" data-tooltip="b站" data-position="top" data-delay="50"><i class="iconfont icon-bilibili-fill"></i> </a>
+        <a href="mailto:1250407709@qq.com" class="tooltipped" target="_blank" aria-label="1258407709@qq.com" data-position="top" data-delay="50"><i class="iconfont icon-mail"></i> </a>
+        <a id="wechat_id" class="tooltipped reward-link modal-trigger btn-medium waves-effect waves-light" data-tooltip="wechat" data-position="top" data-delay="50"><i class="iconfont icon-wechat-fill"></i> </a>
+        <a href="javascript:;" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50"><i class="iconfont icon-rss-fill"></i></a>
+    </div>
+  </header>
+
+  <main>
+    
+      
+<script> document.getElementById('sockial-link').style.display="none"</script>
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">linux内核网络设备</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="tun-与-tap-设备，网桥、VLAN、bonding-的学习"><a href="#tun-与-tap-设备，网桥、VLAN、bonding-的学习" class="headerlink" title="tun 与 tap 设备，网桥、VLAN、bonding 的学习"></a>tun 与 tap 设备，网桥、VLAN、bonding 的学习</h1><h2 id="tun-与-tap-设备"><a href="#tun-与-tap-设备" class="headerlink" title="tun 与 tap 设备"></a>tun 与 tap 设备</h2><p>这两个都是虚拟网络设备，tun 设备用来实现三层隧道（三层 ip 数据报），tap 设备用来实现二层隧道（二层以太网数据帧）。</p>
+<p>tun 示例程序：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;fcntl.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/ioctl.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;sys/socket.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;linux/if.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;linux/if_tun.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;unistd.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdio.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;stdlib.h&gt;</span></span><br><span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;string.h&gt;</span></span><br><br><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">tun_open</span><span class="hljs-params">(<span class="hljs-type">void</span>)</span></span><br><span class="hljs-function"></span>&#123;<br>	<span class="hljs-keyword">struct</span> <span class="hljs-title class_">ifreq</span> ifr;<br>	<span class="hljs-type">int</span> fd;<br>	<span class="hljs-type">char</span> dev[IFNAMSIZ];<br>	<span class="hljs-type">char</span> buf[<span class="hljs-number">512</span>];<br><br>	fd = <span class="hljs-built_in">open</span>(<span class="hljs-string">&quot;/dev/net/tun&quot;</span>, O_RDWR);<br><br>	<span class="hljs-built_in">memset</span>(&amp;ifr, <span class="hljs-number">0</span>, <span class="hljs-built_in">sizeof</span>(ifr));<br>	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;<br>	<span class="hljs-built_in">strncpy</span>(ifr.ifr_name, <span class="hljs-string">&quot;tun%d&quot;</span>, IFNAMSIZ);<br>	<span class="hljs-built_in">ioctl</span>(fd, TUNSETIFF, &amp;ifr);<br><br>	<span class="hljs-built_in">strncpy</span>(dev, ifr.ifr_name, IFNAMSIZ);<br>	<span class="hljs-built_in">sprintf</span>(buf, <span class="hljs-string">&quot;ifconfig %s 192.168.1.1 pointopoint 192.168.1.2&quot;</span>, dev);<br>	<span class="hljs-built_in">system</span>(buf);<br><br>	<span class="hljs-keyword">return</span> fd;<br>&#125;<br><br><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">dump_pkt</span><span class="hljs-params">(<span class="hljs-type">unsigned</span> <span class="hljs-type">char</span> *pkt, <span class="hljs-type">int</span> len)</span></span><br><span class="hljs-function"></span>&#123;<br>	<span class="hljs-type">int</span> i;<br><br>	<span class="hljs-keyword">for</span> (i = <span class="hljs-number">0</span>; i &lt; len; i++)<br>		<span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;%02x &quot;</span>, pkt[i]);<br><br>	<span class="hljs-built_in">printf</span>(<span class="hljs-string">&quot;\n&quot;</span>);<br>&#125;<br><br><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">pingpong</span><span class="hljs-params">(<span class="hljs-type">int</span> fd)</span></span><br><span class="hljs-function"></span>&#123;<br>	fd_set fds;<br>	<span class="hljs-type">int</span> len;<br>	<span class="hljs-type">unsigned</span> <span class="hljs-type">char</span> pkt[<span class="hljs-number">512</span>];<br><br>	<span class="hljs-built_in">FD_ZERO</span>(&amp;fds);<br>	<span class="hljs-built_in">FD_SET</span>(fd, &amp;fds);<br><br>	<span class="hljs-built_in">select</span>(fd + <span class="hljs-number">1</span>, &amp;fds, <span class="hljs-literal">NULL</span>, <span class="hljs-literal">NULL</span>, <span class="hljs-literal">NULL</span>);<br><br>	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">FD_ISSET</span>(fd, &amp;fds)) &#123;<br>		len = <span class="hljs-built_in">read</span>(fd, pkt, <span class="hljs-number">512</span>);<br>		<span class="hljs-built_in">dump_pkt</span>(pkt, len);<br><br>		<span class="hljs-comment">/* echo request */</span><br>		<span class="hljs-keyword">if</span> (pkt[<span class="hljs-number">20</span>] != <span class="hljs-number">0x08</span>)<br>			<span class="hljs-keyword">return</span>;<br><br>		<span class="hljs-comment">/* 修改 ip 头的 src */</span><br>		pkt[<span class="hljs-number">15</span>] = <span class="hljs-number">0x02</span>;<br>		pkt[<span class="hljs-number">19</span>] = <span class="hljs-number">0x01</span>;<br>		pkt[<span class="hljs-number">20</span>] = <span class="hljs-number">0x00</span>;<br>		<span class="hljs-built_in">write</span>(fd, pkt, len);<br>	&#125;<br>&#125;<br><br><span class="hljs-function"><span class="hljs-type">int</span> <span class="hljs-title">main</span><span class="hljs-params">(<span class="hljs-type">int</span> argc, <span class="hljs-type">char</span> *argv[])</span></span><br><span class="hljs-function"></span>&#123;<br>	<span class="hljs-type">int</span> fd;<br><br>	fd = <span class="hljs-built_in">tun_open</span>();<br><br>	<span class="hljs-keyword">for</span> (;;)<br>		<span class="hljs-built_in">pingpong</span>(fd);<br><br>	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure>
+<p>第一步需要加载 tun.ko 模块，执行 modprobe tun 即可。加载此模块后 &#x2F;dev&#x2F;net&#x2F;tun 设备文件会被生成，这样上述程序才能正常工作。</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">lcj</span>@virt-debian10:~$ ls -lh /dev/net/tun<br><span class="hljs-attribute">crw</span>-rw-rw- <span class="hljs-number">1</span> root root <span class="hljs-number">10</span>, <span class="hljs-number">200</span> <span class="hljs-number">7</span>月  <span class="hljs-number">28</span> <span class="hljs-number">08</span>:<span class="hljs-number">23</span> /dev/net/tun<br></code></pre></td></tr></table></figure>
+<p>使用 root 权限执行上述程序，执行后在另外一个终端中执行 ifconfig 命令查看，系统中增加了一个 tun0 这个虚拟接口。</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">tun0</span>: flags=<span class="hljs-number">4305</span>&lt;UP,POINTOPOINT,RUNNING,NOARP,MULTICAST&gt;  mtu <span class="hljs-number">1500</span><br>        <span class="hljs-attribute">inet</span> <span class="hljs-number">192.168.1.1</span>  netmask <span class="hljs-number">255.255.255.255</span>  destination <span class="hljs-number">192.168.1.2</span><br>        <span class="hljs-attribute">inet6</span> fe80::f384:<span class="hljs-number">8174</span>:<span class="hljs-number">9911</span>:<span class="hljs-number">8438</span>  prefixlen <span class="hljs-number">64</span>  scopeid <span class="hljs-number">0</span>x20&lt;link&gt;<br>        <span class="hljs-attribute">unspec</span> <span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>  txqueuelen <span class="hljs-number">500</span>  (UNSPEC)<br>        <span class="hljs-attribute">RX</span> packets <span class="hljs-number">0</span>  bytes <span class="hljs-number">0</span> (<span class="hljs-number">0</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">RX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span>  overruns <span class="hljs-number">0</span>  frame <span class="hljs-number">0</span><br>        <span class="hljs-attribute">TX</span> packets <span class="hljs-number">2</span>  bytes <span class="hljs-number">96</span> (<span class="hljs-number">96</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">TX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span> overruns <span class="hljs-number">0</span>  carrier <span class="hljs-number">0</span>  collisions <span class="hljs-number">0</span><br></code></pre></td></tr></table></figure>
+
+<p>执行 ping 192.168.1.2 后有如下报警：</p>
+<figure class="highlight basic"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs basic"><span class="hljs-symbol">64 </span>bytes from <span class="hljs-number">192.168</span>.<span class="hljs-number">1.2</span>: icmp_seq=<span class="hljs-number">122</span> ttl=<span class="hljs-number">64</span> time=<span class="hljs-number">0.105</span> ms (BAD CHECKSUM!)<br><span class="hljs-symbol">64 </span>bytes from <span class="hljs-number">192.168</span>.<span class="hljs-number">1.2</span>: icmp_seq=<span class="hljs-number">123</span> ttl=<span class="hljs-number">64</span> time=<span class="hljs-number">0.110</span> ms (BAD CHECKSUM!)<br><span class="hljs-symbol">64 </span>bytes from <span class="hljs-number">192.168</span>.<span class="hljs-number">1.2</span>: icmp_seq=<span class="hljs-number">124</span> ttl=<span class="hljs-number">64</span> time=<span class="hljs-number">0.111</span> ms (BAD CHECKSUM!)<br></code></pre></td></tr></table></figure>
+
+<p>BAD CHECKSUM 这个提示表示数据包头部校验失败。有了这个提示再来审视上面的代码，我发现上面的代码在修改了 ip header 中的 src 与 dst 地址后并没有重新生成 chechsum 并更新就直接发送了。当 ping 收到这个报文时，校验 checksum 就会失败。</p>
+<p>这里我直接将 write 调用注释掉，然后重新编译并运行程序，这次继续 ping 会报地址不可达的警告。</p>
+<figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs routeros"><span class="hljs-keyword">From</span> 192.168.1.5 <span class="hljs-attribute">icmp_seq</span>=141 Destination Host Unreachable<br></code></pre></td></tr></table></figure>
+<p>这是正常的。</p>
+<p>ping 了几个包后，观察 ifconfig 收包情况，可以看到有统计数目。</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">lcj</span>@virt-debian10:~$ sudo ifconfig tun0<br><span class="hljs-attribute">tun0</span>: flags=<span class="hljs-number">4305</span>&lt;UP,POINTOPOINT,RUNNING,NOARP,MULTICAST&gt;  mtu <span class="hljs-number">1500</span><br>        <span class="hljs-attribute">inet</span> <span class="hljs-number">192.168.1.1</span>  netmask <span class="hljs-number">255.255.255.255</span>  destination <span class="hljs-number">192.168.1.2</span><br>        <span class="hljs-attribute">inet6</span> fe80::f6fe:<span class="hljs-number">2</span>e04:<span class="hljs-number">68</span>c7:dfd3  prefixlen <span class="hljs-number">64</span>  scopeid <span class="hljs-number">0</span>x20&lt;link&gt;<br>        <span class="hljs-attribute">unspec</span> <span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>-<span class="hljs-number">00</span>  txqueuelen <span class="hljs-number">500</span>  (UNSPEC)<br>        <span class="hljs-attribute">RX</span> packets <span class="hljs-number">5</span>  bytes <span class="hljs-number">420</span> (<span class="hljs-number">420</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">RX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span>  overruns <span class="hljs-number">0</span>  frame <span class="hljs-number">0</span><br>        <span class="hljs-attribute">TX</span> packets <span class="hljs-number">8</span>  bytes <span class="hljs-number">564</span> (<span class="hljs-number">564</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">TX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span> overruns <span class="hljs-number">0</span>  carrier <span class="hljs-number">0</span>  collisions <span class="hljs-number">0</span><br></code></pre></td></tr></table></figure>
+<p>执行 ethtool 命令输出如下：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-string">lcj@virt-debian10:~$</span> <span class="hljs-string">sudo</span> <span class="hljs-string">ethtool</span> <span class="hljs-string">tun0</span><br><span class="hljs-attr">Settings for tun0:</span><br>	<span class="hljs-attr">Supported ports:</span> [ ]<br>	<span class="hljs-attr">Supported link modes:</span>   <span class="hljs-string">Not</span> <span class="hljs-string">reported</span><br>	<span class="hljs-attr">Supported pause frame use:</span> <span class="hljs-literal">No</span><br>	<span class="hljs-attr">Supports auto-negotiation:</span> <span class="hljs-literal">No</span><br>	<span class="hljs-attr">Supported FEC modes:</span> <span class="hljs-string">Not</span> <span class="hljs-string">reported</span><br>	<span class="hljs-attr">Advertised link modes:</span>  <span class="hljs-string">Not</span> <span class="hljs-string">reported</span><br>	<span class="hljs-attr">Advertised pause frame use:</span> <span class="hljs-literal">No</span><br>	<span class="hljs-attr">Advertised auto-negotiation:</span> <span class="hljs-literal">No</span><br>	<span class="hljs-attr">Advertised FEC modes:</span> <span class="hljs-string">Not</span> <span class="hljs-string">reported</span><br>	<span class="hljs-attr">Speed:</span> <span class="hljs-string">10Mb/s</span><br>	<span class="hljs-attr">Duplex:</span> <span class="hljs-string">Full</span><br>	<span class="hljs-attr">Port:</span> <span class="hljs-string">Twisted</span> <span class="hljs-string">Pair</span><br>	<span class="hljs-attr">PHYAD:</span> <span class="hljs-number">0</span><br>	<span class="hljs-attr">Transceiver:</span> <span class="hljs-string">internal</span><br>	<span class="hljs-attr">Auto-negotiation:</span> <span class="hljs-string">off</span><br>	<span class="hljs-attr">MDI-X:</span> <span class="hljs-string">Unknown</span><br>	<span class="hljs-attr">Current message level:</span> <span class="hljs-number">0xffffffa1</span> <span class="hljs-string">(-95)</span><br>			       <span class="hljs-string">drv</span> <span class="hljs-string">ifup</span> <span class="hljs-string">tx_err</span> <span class="hljs-string">tx_queued</span> <span class="hljs-string">intr</span> <span class="hljs-string">tx_done</span> <span class="hljs-string">rx_status</span> <span class="hljs-string">pktdata</span> <span class="hljs-string">hw</span> <span class="hljs-string">wol</span> <span class="hljs-number">0xffff8000</span><br>	<span class="hljs-attr">Link detected:</span> <span class="hljs-literal">yes</span><br></code></pre></td></tr></table></figure>
+<p>上述输出是由 tun 的实现决定的，在其 ethtool_ops 的实现中，speed、duplex、port 等等信息都是固定的，不会改变，这与常见的物理网卡有所区别。</p>
+<h2 id="网桥"><a href="#网桥" class="headerlink" title="网桥"></a>网桥</h2><p>使用网桥可以将多个接口连接到同一网段内，这一功能等同于交换式集线器。</p>
+<p>使用 brctl 命令来创建网桥接口。</p>
+<p>使用此命令前，需要加载 bridge.ko 内核模块，直接执行 modprobe bridge.ko 即可。</p>
+<p>在我的虚拟机中有四个网卡接口：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">lcj</span>@virt-debian10:~$ sudo ifconfig -a<br><span class="hljs-attribute">enp1s0</span>: flags=<span class="hljs-number">4163</span>&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span class="hljs-number">1500</span><br>        <span class="hljs-attribute">inet</span> <span class="hljs-number">192.168.122.29</span>  netmask <span class="hljs-number">255.255.255.0</span>  broadcast <span class="hljs-number">192.168.122.255</span><br>        <span class="hljs-attribute">inet6</span> fe80::<span class="hljs-number">5054</span>:ff:fe71:c999  prefixlen <span class="hljs-number">64</span>  scopeid <span class="hljs-number">0</span>x20&lt;link&gt;<br>        <span class="hljs-attribute">ether</span> <span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:<span class="hljs-number">71</span>:c9:<span class="hljs-number">99</span>  txqueuelen <span class="hljs-number">1000</span>  (Ethernet)<br>        <span class="hljs-attribute">RX</span> packets <span class="hljs-number">2188027</span>  bytes <span class="hljs-number">208647751</span> (<span class="hljs-number">198</span>.<span class="hljs-number">9</span> MiB)<br>        <span class="hljs-attribute">RX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">3</span>  overruns <span class="hljs-number">0</span>  frame <span class="hljs-number">0</span><br>        <span class="hljs-attribute">TX</span> packets <span class="hljs-number">5180286</span>  bytes <span class="hljs-number">856255243</span> (<span class="hljs-number">816</span>.<span class="hljs-number">5</span> MiB)<br>        <span class="hljs-attribute">TX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span> overruns <span class="hljs-number">0</span>  carrier <span class="hljs-number">0</span>  collisions <span class="hljs-number">0</span><br><br><span class="hljs-attribute">enp4s0</span>: flags=<span class="hljs-number">4098</span>&lt;BROADCAST,MULTICAST&gt;  mtu <span class="hljs-number">1500</span><br>        <span class="hljs-attribute">ether</span> <span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:d9:bf:<span class="hljs-number">99</span>  txqueuelen <span class="hljs-number">1000</span>  (Ethernet)<br>        <span class="hljs-attribute">RX</span> packets <span class="hljs-number">0</span>  bytes <span class="hljs-number">0</span> (<span class="hljs-number">0</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">RX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span>  overruns <span class="hljs-number">0</span>  frame <span class="hljs-number">0</span><br>        <span class="hljs-attribute">TX</span> packets <span class="hljs-number">0</span>  bytes <span class="hljs-number">0</span> (<span class="hljs-number">0</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">TX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span> overruns <span class="hljs-number">0</span>  carrier <span class="hljs-number">0</span>  collisions <span class="hljs-number">0</span><br>        <span class="hljs-attribute">device</span> interrupt <span class="hljs-number">22</span>  memory <span class="hljs-number">0</span>xfca40000-fca60000<br><br><span class="hljs-attribute">enp8s0</span>: flags=<span class="hljs-number">4098</span>&lt;BROADCAST,MULTICAST&gt;  mtu <span class="hljs-number">1500</span><br>        <span class="hljs-attribute">ether</span> <span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:df:a9:b0  txqueuelen <span class="hljs-number">1000</span>  (Ethernet)<br>        <span class="hljs-attribute">RX</span> packets <span class="hljs-number">0</span>  bytes <span class="hljs-number">0</span> (<span class="hljs-number">0</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">RX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span>  overruns <span class="hljs-number">0</span>  frame <span class="hljs-number">0</span><br>        <span class="hljs-attribute">TX</span> packets <span class="hljs-number">0</span>  bytes <span class="hljs-number">0</span> (<span class="hljs-number">0</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">TX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span> overruns <span class="hljs-number">0</span>  carrier <span class="hljs-number">0</span>  collisions <span class="hljs-number">0</span><br>        <span class="hljs-attribute">device</span> interrupt <span class="hljs-number">22</span>  memory <span class="hljs-number">0</span>xfc240000-fc260000<br><br><span class="hljs-attribute">enp9s0</span>: flags=<span class="hljs-number">4098</span>&lt;BROADCAST,MULTICAST&gt;  mtu <span class="hljs-number">1500</span><br>        <span class="hljs-attribute">ether</span> <span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:<span class="hljs-number">08</span>:<span class="hljs-number">3</span>f:ef  txqueuelen <span class="hljs-number">1000</span>  (Ethernet)<br>        <span class="hljs-attribute">RX</span> packets <span class="hljs-number">0</span>  bytes <span class="hljs-number">0</span> (<span class="hljs-number">0</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">RX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span>  overruns <span class="hljs-number">0</span>  frame <span class="hljs-number">0</span><br>        <span class="hljs-attribute">TX</span> packets <span class="hljs-number">0</span>  bytes <span class="hljs-number">0</span> (<span class="hljs-number">0</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">TX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span> overruns <span class="hljs-number">0</span>  carrier <span class="hljs-number">0</span>  collisions <span class="hljs-number">0</span><br>        <span class="hljs-attribute">device</span> interrupt <span class="hljs-number">23</span>  memory <span class="hljs-number">0</span>xfc040000-fc060000<br></code></pre></td></tr></table></figure>
+
+<p>创建 br0 并设置 ip 地址等信息。</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">lcj</span>@virt-debian10:~$ sudo brctl addbr br0<br><span class="hljs-attribute">lcj</span>@virt-debian10:~$ sudo ifconfig br0<br><span class="hljs-attribute">br0</span>: flags=<span class="hljs-number">4098</span>&lt;BROADCAST,MULTICAST&gt;  mtu <span class="hljs-number">1500</span><br>        <span class="hljs-attribute">ether</span> c2:<span class="hljs-number">7</span>e:<span class="hljs-number">25</span>:a0:<span class="hljs-number">16</span>:f7  txqueuelen <span class="hljs-number">1000</span>  (Ethernet)<br>        <span class="hljs-attribute">RX</span> packets <span class="hljs-number">0</span>  bytes <span class="hljs-number">0</span> (<span class="hljs-number">0</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">RX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span>  overruns <span class="hljs-number">0</span>  frame <span class="hljs-number">0</span><br>        <span class="hljs-attribute">TX</span> packets <span class="hljs-number">0</span>  bytes <span class="hljs-number">0</span> (<span class="hljs-number">0</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">TX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span> overruns <span class="hljs-number">0</span>  carrier <span class="hljs-number">0</span>  collisions <span class="hljs-number">0</span><br><br><span class="hljs-attribute">lcj</span>@virt-debian10:~$ sudo ifconfig br0 <span class="hljs-number">10.1.0.100</span> netmask <span class="hljs-number">255.255.255.0</span> broadmask <span class="hljs-number">10.1.0.255</span> up<br><span class="hljs-attribute">lcj</span>@virt-debian10:~$ sudo ifconfig br0<br><span class="hljs-attribute">br0</span>: flags=<span class="hljs-number">4163</span>&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span class="hljs-number">1500</span><br>        <span class="hljs-attribute">inet</span> <span class="hljs-number">10.1.0.255</span>  netmask <span class="hljs-number">255.0.0.0</span>  broadcast <span class="hljs-number">10.255.255.255</span><br>        <span class="hljs-attribute">inet6</span> fe80::c07e:<span class="hljs-number">25</span>ff:fea0:<span class="hljs-number">16</span>f7  prefixlen <span class="hljs-number">64</span>  scopeid <span class="hljs-number">0</span>x20&lt;link&gt;<br>        <span class="hljs-attribute">ether</span> c2:<span class="hljs-number">7</span>e:<span class="hljs-number">25</span>:a0:<span class="hljs-number">16</span>:f7  txqueuelen <span class="hljs-number">1000</span>  (Ethernet)<br>        <span class="hljs-attribute">RX</span> packets <span class="hljs-number">0</span>  bytes <span class="hljs-number">0</span> (<span class="hljs-number">0</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">RX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span>  overruns <span class="hljs-number">0</span>  frame <span class="hljs-number">0</span><br>        <span class="hljs-attribute">TX</span> packets <span class="hljs-number">6</span>  bytes <span class="hljs-number">516</span> (<span class="hljs-number">516</span>.<span class="hljs-number">0</span> B)<br>        <span class="hljs-attribute">TX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span> overruns <span class="hljs-number">0</span>  carrier <span class="hljs-number">0</span>  collisions <span class="hljs-number">0</span><br></code></pre></td></tr></table></figure>
+
+<p>添加接口到 br0 中：</p>
+<figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs mipsasm">lcj@virt-debian10:~$ sudo <span class="hljs-keyword">brctl </span><span class="hljs-keyword">addif </span><span class="hljs-keyword">br0 </span>enp4s0<br>lcj@virt-debian10:~$ sudo <span class="hljs-keyword">brctl </span><span class="hljs-keyword">addif </span><span class="hljs-keyword">br0 </span>enp8s0<br>lcj@virt-debian10:~$ sudo <span class="hljs-keyword">brctl </span><span class="hljs-keyword">addif </span><span class="hljs-keyword">br0 </span>enp9s0<br>lcj@virt-debian10:~$ sudo <span class="hljs-keyword">brctl </span><span class="hljs-keyword">show</span><br><span class="hljs-keyword"></span><span class="hljs-keyword">bridge </span>name	<span class="hljs-keyword">bridge </span>id		STP enabled	interfaces<br><span class="hljs-keyword">br0	</span>	<span class="hljs-number">8000</span>.<span class="hljs-number">525400083</span>fef	no		enp4s0<br>							enp8s0<br>							enp9s0<br></code></pre></td></tr></table></figure>
+
+<p>将添加到的接口激活：</p>
+<figure class="highlight crystal"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs crystal">lcj<span class="hljs-variable">@virt</span>-<span class="hljs-symbol">debian10:</span>~<span class="hljs-variable">$ </span>sudo ifconfig enp4s0 up<br>lcj<span class="hljs-variable">@virt</span>-<span class="hljs-symbol">debian10:</span>~<span class="hljs-variable">$ </span>sudo ifconfig enp8s0 up<br>lcj<span class="hljs-variable">@virt</span>-<span class="hljs-symbol">debian10:</span>~<span class="hljs-variable">$ </span>sudo ifconfig enp9s0 up<br></code></pre></td></tr></table></figure>
+<p>&#x2F;etc&#x2F;network&#x2F;interfaces 文件中添加 br0 配置项目：</p>
+<figure class="highlight smali"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs smali">auto br0<br>iface br0 inet dhcp<br><span class="hljs-keyword">	bridge</span>_ports enp4s0 enp8s0 enp9s0<br><span class="hljs-keyword">	bridge</span>_stp off<br></code></pre></td></tr></table></figure>
+<p>br0 中会存储一张转发表，可以用 brctl showmacs 命令来查看。</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">lcj</span>@virt-debian10:~$ sudo brctl showmacs br0<br><span class="hljs-attribute">port</span> no	mac addr		is local?	ageing timer<br>  <span class="hljs-attribute">3</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:<span class="hljs-number">08</span>:<span class="hljs-number">3</span>f:ef	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br>  <span class="hljs-attribute">3</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:<span class="hljs-number">08</span>:<span class="hljs-number">3</span>f:ef	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br>  <span class="hljs-attribute">1</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:<span class="hljs-number">22</span>:e3:e6	no		   <span class="hljs-number">1</span>.<span class="hljs-number">48</span><br>  <span class="hljs-attribute">1</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:d9:bf:<span class="hljs-number">99</span>	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br>  <span class="hljs-attribute">1</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:d9:bf:<span class="hljs-number">99</span>	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br>  <span class="hljs-attribute">2</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:df:a9:b0	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br>  <span class="hljs-attribute">2</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:df:a9:b0	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br>  <span class="hljs-attribute">1</span>	fe:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:d9:bf:<span class="hljs-number">99</span>	no		   <span class="hljs-number">0</span>.<span class="hljs-number">62</span><br>  <span class="hljs-attribute">2</span>	fe:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:df:a9:b0	no		 <span class="hljs-number">182</span>.<span class="hljs-number">63</span><br><span class="hljs-attribute">lcj</span>@virt-debian10:~$<br></code></pre></td></tr></table></figure>
+<p>网络端口可能会不断的变化，当 bridge 学习到了一个地址时，一个定时器也会自动启动，经验值是 5 分钟，这个时间称为 ageing time。在一个 ageing time 时间内如果一个地址入口不可见，这个地址将从 bridge 的数据库中移除。</p>
+<p>可以执行 brctl setageing 命令来设定 ageing time.</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">lcj</span>@virt-debian10:~$ sudo brctl setageing br0 <span class="hljs-number">1</span><br><span class="hljs-attribute">lcj</span>@virt-debian10:~$ sudo brctl showmacs br0<br><span class="hljs-attribute">port</span> no	mac addr		is local?	ageing timer<br>  <span class="hljs-attribute">3</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:<span class="hljs-number">08</span>:<span class="hljs-number">3</span>f:ef	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br>  <span class="hljs-attribute">3</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:<span class="hljs-number">08</span>:<span class="hljs-number">3</span>f:ef	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br>  <span class="hljs-attribute">1</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:d9:bf:<span class="hljs-number">99</span>	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br>  <span class="hljs-attribute">1</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:d9:bf:<span class="hljs-number">99</span>	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br>  <span class="hljs-attribute">2</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:df:a9:b0	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br>  <span class="hljs-attribute">2</span>	<span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:df:a9:b0	yes		   <span class="hljs-number">0</span>.<span class="hljs-number">00</span><br></code></pre></td></tr></table></figure>
+
+<h2 id="VLAN"><a href="#VLAN" class="headerlink" title="VLAN"></a>VLAN</h2><p>vlan 全程 virtual lan，能够用来虚拟分配以太网。归属于不同的 VLAN ID 的设备之间需要一个路由才能够通信，这意味这不同的 VLAN ID 将以太网划分成了不同的分组。</p>
+<p>即使将 LAN 的连线街道相同集线器或交换机上，VLAN ID 不同也不能相互通信。</p>
+<p>vconfig 命令生成 vlan 接口。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs bash">sudo ip <span class="hljs-built_in">link</span> add <span class="hljs-built_in">link</span> enp4s0 name enp4s0.100 <span class="hljs-built_in">type</span> vlan <span class="hljs-built_in">id</span> 100<br>lcj@virt-debian10:~$ sudo ip <span class="hljs-built_in">link</span> add <span class="hljs-built_in">link</span> enp8s0 name enp8s0.100 <span class="hljs-built_in">type</span> vlan <span class="hljs-built_in">id</span> 100<br>lcj@virt-debian10:~$ sudo ip <span class="hljs-built_in">link</span> add <span class="hljs-built_in">link</span> enp9s0 name enp9s0.101 <span class="hljs-built_in">type</span> vlan <span class="hljs-built_in">id</span> 101<br></code></pre></td></tr></table></figure>
+<p>生成 vlan 接口后查看 proc 文件信息，有如下内容：</p>
+<figure class="highlight tcl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs tcl">lcj@virt-debian10:~$ ls /<span class="hljs-keyword">proc</span>/net/vlan/<span class="hljs-title"></span><br><span class="hljs-title">config</span> <span class="hljs-title">     enp4s0.100</span> <span class="hljs-title"> enp8s0.100</span> <span class="hljs-title"> enp9s0.101</span><br>lcj@virt-debian10:~$<span class="hljs-title"> sudo</span> cat /<span class="hljs-keyword">proc</span>/net/vlan/config<span class="hljs-title"></span><br><span class="hljs-title">VLAN</span> Dev<span class="hljs-title"> name</span>	 |<span class="hljs-title"> VLAN</span> ID<span class="hljs-title"></span><br><span class="hljs-title">Name-Type:</span> VLAN_NAME_TYPE_RAW_PLUS_VID_NO_PAD<span class="hljs-title"></span><br><span class="hljs-title">enp4s0.100</span>     | 100  |<span class="hljs-title"> enp4s0</span><br>enp8s0.100     | 100  |<span class="hljs-title"> enp8s0</span><br>enp9s0.101     | 101  |<span class="hljs-title"> enp9s0</span><br></code></pre></td></tr></table></figure>
+
+<p>删除接口的 vlan 分组可以继续执行 ip 命令来完成，将 add 改为 delete 并只加上 vlan 接口名。</p>
+<p>示例如下：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs perl">ip <span class="hljs-keyword">link</span> <span class="hljs-keyword">delete</span> enp4s<span class="hljs-number">0</span>.<span class="hljs-number">100</span><br></code></pre></td></tr></table></figure>
+<p>VLAN 接口名的种类：</p>
+<p>1, VLAN_PLUS_VID 字符串 vlan + 0 padding+ VLAN ID<br>2. VLAN_PLUS_VID_NO_PAD 字符串 vlan + VLAN ID<br>3. DEV_PLUS_VID 物理接口名+点+0 padding + VLAN ID<br>4. DEV_PLUS_VID_NO_PAD 物理接口名+点+VLAN ID</p>
+<p>我们上面的 vlan 接口名就是用了第 4 种命名方式。</p>
+<h2 id="bonding-驱动程序"><a href="#bonding-驱动程序" class="headerlink" title="bonding 驱动程序"></a>bonding 驱动程序</h2><p>bonding 用于聚合多个物理网络端口。</p>
+<p>bonding 有 7 种模式，列举如下：</p>
+<ol>
+<li>balance-rr</li>
+<li>active-backup</li>
+<li>balance-xor</li>
+<li>broadcast</li>
+<li>802.3ad</li>
+<li>balance-tlb</li>
+<li>balance-alb</li>
+</ol>
+<p>可以在模块加载的时候执行 mode 参数来设定不同的模式，既可以指定字符串，也可以指定数字。</p>
+<p>命令示例如下：</p>
+<figure class="highlight routeros"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs routeros">modprobe bonding <span class="hljs-attribute">mode</span>=active-backup<br>modprobe bonding <span class="hljs-attribute">mode</span>=1<br></code></pre></td></tr></table></figure>
+<p>内核源码目录中有如下对 bonding 功能的说明文档：</p>
+<p>Documentation&#x2F;networking&#x2F;bonding.txt</p>
+<p>阅读上述文件，手动创建一个 bond0 接口可以通过向 &#x2F;sys&#x2F;class&#x2F;net&#x2F;bonding_masters 写值来完成。命令示例如下：</p>
+<figure class="highlight stata"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs stata"><span class="hljs-keyword">su</span> -c &#x27;echo +bond0 &gt; /sys/<span class="hljs-keyword">class</span>/<span class="hljs-keyword">net</span>/bonding_masters&#x27;<br></code></pre></td></tr></table></figure>
+<p>创建后查看 dmesg 信息可以看到创建成功了，ifconfig bond0 能够看到接口信息，这个 bod0 是 master 接口。操作日志记录如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs bash">lcj@virt-debian10:~/linux-source-4.19/Documentation/networking$ sudo dmesg | <span class="hljs-built_in">tail</span> -n 1<br>[93154.264172] bonding: bond0 is being created...<br>lcj@virt-debian10:~/linux-source-4.19/Documentation/networking$ sudo ifconfig bond0<br>bond0: flags=5122&lt;BROADCAST,MASTER,MULTICAST&gt;  mtu 1500<br>        ether c6:75:a1:27:73:1c  txqueuelen 1000  (Ethernet)<br>        RX packets 0  bytes 0 (0.0 B)<br>        RX errors 0  dropped 0  overruns 0  frame 0<br>        TX packets 0  bytes 0 (0.0 B)<br>        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0<br></code></pre></td></tr></table></figure>
+<p>此时 &#x2F;proc&#x2F;net&#x2F;bonding 目录中也添加了 bond0 的内容，查看内容如下：</p>
+<figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs awk">ls <span class="hljs-regexp">/proc/</span>net<span class="hljs-regexp">/bonding/</span><br>bond0<br></code></pre></td></tr></table></figure>
+<p>这之后可以将多个网口添加到 bond0 中，这可以通过执行 ifenslave 命令来完成。我的系统中没有预装这个软件，执行 sudo apt-get install ifenslave 完成安装。</p>
+<figure class="highlight pgsql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><code class="hljs pgsql">lcj@virt-debian10:~/linux-source<span class="hljs-number">-4.19</span>/Documentation/networking$ sudo ifenslave bond0 enp8s0 enp9s0<br>lcj@virt-debian10:~/linux-source<span class="hljs-number">-4.19</span>/Documentation/networking$ sudo dmesg | tail -n <span class="hljs-number">10</span><br>[<span class="hljs-number">93659.999911</span>] bond0: Enslaving enp8s0 <span class="hljs-keyword">as</span> an active interface <span class="hljs-keyword">with</span> an up link<br>[<span class="hljs-number">93660.091509</span>] <span class="hljs-number">8021</span>q: adding VLAN <span class="hljs-number">0</span> <span class="hljs-keyword">to</span> HW <span class="hljs-keyword">filter</span> <span class="hljs-keyword">on</span> device enp9s0<br>[<span class="hljs-number">93660.101759</span>] bond0: Enslaving enp9s0 <span class="hljs-keyword">as</span> an active interface <span class="hljs-keyword">with</span> an up link<br>[<span class="hljs-number">93662.056500</span>] e1000e: enp9s0 NIC Link <span class="hljs-keyword">is</span> Up <span class="hljs-number">1000</span> Mbps <span class="hljs-keyword">Full</span> Duplex, Flow Control: Rx/Tx<br>[<span class="hljs-number">93662.217044</span>] e1000e: enp8s0 NIC Link <span class="hljs-keyword">is</span> Up <span class="hljs-number">1000</span> Mbps <span class="hljs-keyword">Full</span> Duplex, Flow Control: Rx/Tx<br></code></pre></td></tr></table></figure>
+<p>上面的例子中，我执行 ifenslave 将 enp8s0 与 enp9s0 添加到了 bond0 中，并查看了 demsg 信息。这两个网络接口添加后，再次执行 ifconfig 查看接口信息，发现都增加了 SLAVE 标志。示例如下：</p>
+<figure class="highlight apache"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs apache"><span class="hljs-attribute">lcj</span>@virt-debian10:~/linux-source-<span class="hljs-number">4</span>.<span class="hljs-number">19</span>/Documentation/networking$ sudo ifconfig enp8s0<br><span class="hljs-attribute">enp8s0</span>: flags=<span class="hljs-number">6211</span>&lt;UP,BROADCAST,RUNNING,SLAVE,MULTICAST&gt;  mtu <span class="hljs-number">1500</span><br>        <span class="hljs-attribute">ether</span> <span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:df:a9:b0  txqueuelen <span class="hljs-number">1000</span>  (Ethernet)<br>        <span class="hljs-attribute">RX</span> packets <span class="hljs-number">18027</span>  bytes <span class="hljs-number">1217882</span> (<span class="hljs-number">1</span>.<span class="hljs-number">1</span> MiB)<br>        <span class="hljs-attribute">RX</span> errors <span class="hljs-number">1005</span>  dropped <span class="hljs-number">0</span>  overruns <span class="hljs-number">0</span>  frame <span class="hljs-number">1005</span><br>        <span class="hljs-attribute">TX</span> packets <span class="hljs-number">19884</span>  bytes <span class="hljs-number">3872849553</span> (<span class="hljs-number">3</span>.<span class="hljs-number">6</span> GiB)<br>        <span class="hljs-attribute">TX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span> overruns <span class="hljs-number">0</span>  carrier <span class="hljs-number">0</span>  collisions <span class="hljs-number">0</span><br>        <span class="hljs-attribute">device</span> interrupt <span class="hljs-number">22</span>  memory <span class="hljs-number">0</span>xfc240000-fc260000<br><br><span class="hljs-attribute">lcj</span>@virt-debian10:~/linux-source-<span class="hljs-number">4</span>.<span class="hljs-number">19</span>/Documentation/networking$ sudo ifconfig enp9s0<br><span class="hljs-attribute">enp9s0</span>: flags=<span class="hljs-number">6211</span>&lt;UP,BROADCAST,RUNNING,SLAVE,MULTICAST&gt;  mtu <span class="hljs-number">1500</span><br>        <span class="hljs-attribute">ether</span> <span class="hljs-number">52</span>:<span class="hljs-number">54</span>:<span class="hljs-number">00</span>:df:a9:b0  txqueuelen <span class="hljs-number">1000</span>  (Ethernet)<br>        <span class="hljs-attribute">RX</span> packets <span class="hljs-number">215721</span>  bytes <span class="hljs-number">19494398</span> (<span class="hljs-number">18</span>.<span class="hljs-number">5</span> MiB)<br>        <span class="hljs-attribute">RX</span> errors <span class="hljs-number">997</span>  dropped <span class="hljs-number">0</span>  overruns <span class="hljs-number">0</span>  frame <span class="hljs-number">997</span><br>        <span class="hljs-attribute">TX</span> packets <span class="hljs-number">3766</span>  bytes <span class="hljs-number">415268735</span> (<span class="hljs-number">396</span>.<span class="hljs-number">0</span> MiB)<br>        <span class="hljs-attribute">TX</span> errors <span class="hljs-number">0</span>  dropped <span class="hljs-number">0</span> overruns <span class="hljs-number">0</span>  carrier <span class="hljs-number">0</span>  collisions <span class="hljs-number">0</span><br>        <span class="hljs-attribute">device</span> interrupt <span class="hljs-number">23</span>  memory <span class="hljs-number">0</span>xfc040000-fc060000<br></code></pre></td></tr></table></figure>
+<p>查看 &#x2F;proc&#x2F;net&#x2F;bonding&#x2F;bond0 文件，发现其中添加了 slave 接口的信息，命令示例如下：</p>
+<figure class="highlight tcl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><code class="hljs tcl">lcj@virt-debian10:~/linux-<span class="hljs-keyword">source</span><span class="hljs-number">-4.19</span>/Documentation/networking$ cat /<span class="hljs-keyword">proc</span>/net/bonding/bond0<span class="hljs-title"></span><br><span class="hljs-title">Ethernet</span> Channel<span class="hljs-title"> Bonding</span> Driver:<span class="hljs-title"> v3.7.1</span> (April 27, 2011)<span class="hljs-title"></span><br><span class="hljs-title"></span><br><span class="hljs-title">Bonding</span> Mode:<span class="hljs-title"> load</span> balancing (round-robin)<span class="hljs-title"></span><br><span class="hljs-title">MII</span> Status:<span class="hljs-title"> up</span><br>MII<span class="hljs-title"> Polling</span> Interval (ms): 0<span class="hljs-title"></span><br><span class="hljs-title">Up</span> Delay (ms): 0<span class="hljs-title"></span><br><span class="hljs-title">Down</span> Delay (ms): 0<span class="hljs-title"></span><br><span class="hljs-title"></span><br><span class="hljs-title">Slave</span> Interface:<span class="hljs-title"> enp8s0</span><br>MII<span class="hljs-title"> Status:</span> up<span class="hljs-title"></span><br><span class="hljs-title">Speed:</span> 1000<span class="hljs-title"> Mbps</span><br>Duplex:<span class="hljs-title"> full</span><br>Link<span class="hljs-title"> Failure</span> Count: 0<span class="hljs-title"></span><br><span class="hljs-title">Permanent</span> HW<span class="hljs-title"> addr:</span> 52:54:00:df:a9:b0<span class="hljs-title"></span><br><span class="hljs-title">Slave</span> queue<span class="hljs-title"> ID:</span> 0<span class="hljs-title"></span><br><span class="hljs-title"></span><br><span class="hljs-title">Slave</span> Interface:<span class="hljs-title"> enp9s0</span><br>MII<span class="hljs-title"> Status:</span> up<span class="hljs-title"></span><br><span class="hljs-title">Speed:</span> 1000<span class="hljs-title"> Mbps</span><br>Duplex:<span class="hljs-title"> full</span><br>Link<span class="hljs-title"> Failure</span> Count: 0<span class="hljs-title"></span><br><span class="hljs-title">Permanent</span> HW<span class="hljs-title"> addr:</span> 52:54:00:08:3f:ef<span class="hljs-title"></span><br><span class="hljs-title">Slave</span> queue<span class="hljs-title"> ID:</span> 0<br></code></pre></td></tr></table></figure>
+<p>可以看到 enp8s0 与 enp9s0 都作为了 Slave 并处于 up 状态。</p>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/linux/" class="category-chain-item">linux</a>
+  
+  
+    <span>></span>
+    
+  <a href="/categories/linux/%E7%BD%91%E7%BB%9C%E5%BC%80%E5%8F%91/" class="category-chain-item">网络开发</a>
+  
+  
+
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/kernel-network/">#kernel network</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>linux内核网络设备</div>
+      <div>https://sisyphus1212.github.io/2022/09/20/network/base_knowledge/tun 与 tap 设备，网桥、VLAN、bonding 的学习/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>Author</div>
+          <div>sisyphus</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>Posted on</div>
+          <div>September 20, 2022</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>Licensed under</div>
+        <div>
+          
+            
+            
+              <span class="hint--top hint--rounded" aria-label="BY - Attribution">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/uevent%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0/" title="uevent接口实现">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">uevent接口实现</span>
+                        <span class="visible-mobile">Previous</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-0/" title="linux_udev机制实现-0">
+                        <span class="hidden-mobile">linux_udev机制实现-0</span>
+                        <span class="visible-mobile">Next</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#comments', function() {
+      var light = 'github-light';
+      var dark = 'github-dark';
+      var schema = document.documentElement.getAttribute('data-user-color-scheme');
+      if (schema === 'dark') {
+        schema = dark;
+      } else {
+        schema = light;
+      }
+      window.UtterancesThemeLight = light;
+      window.UtterancesThemeDark = dark;
+      var s = document.createElement('script');
+      s.setAttribute('src', 'https://utteranc.es/client.js');
+      s.setAttribute('repo', 'sisyphus1212/comments');
+      s.setAttribute('issue-term', 'pathname');
+      
+      s.setAttribute('label', 'utterances');
+      
+      s.setAttribute('theme', schema);
+      s.setAttribute('crossorigin', 'anonymous');
+      document.getElementById('comments').appendChild(s);
+    })
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;Table of Contents</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">Search</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">Keyword</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        被访:次数:
+        <span id="busuanzi_value_site_pv"></span>
+        
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        人数:
+        <span id="busuanzi_value_site_uv"></span>
+        
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.10/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">Blog works best with JavaScript enabled</div>
+  </noscript>
+  <script>
+    var wechat_div = document.getElementById('wechat_show');
+    var wechatImg = document.getElementById("wechat_img");
+    wechat_click = document.getElementById('wechat_id');
+    wechat_click.onclick = function() {
+        wechat_div.style.display = "block";
+        wechatImg.src = "./img/wechat.png";
+    }
+    wechat_div.onclick = function() {
+        wechat_div.style.display = "none";
+    }
+</script>
+</body>
+</html>
