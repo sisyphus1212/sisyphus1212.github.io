@@ -1,0 +1,2360 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+
+	<!-- title -->
+	
+	<title>
+	
+		linux_udev机制实现-2 |
+	
+	Sisyphus
+	</title>
+
+	<!-- keywords,description -->
+	
+	
+
+	<!-- favicon -->
+	
+	<link rel="shortcut icon" href="/favicon.png">
+	
+
+
+	<!-- search -->
+	<script>
+		var searchEngine = "";
+		if(typeof searchEngine == "undefined" || searchEngine == null || searchEngine == ""){
+			searchEngine = "https://www.google.com/search?q=";
+		}
+		var homeHost = "";
+		if(typeof homeHost == "undefined" || homeHost == null || homeHost == ""){
+			homeHost = window.location.host;
+		}
+	</script>
+
+
+	
+<link rel="stylesheet" href="/css/main.css">
+
+	
+<link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/4.7.0/css/font-awesome.min.css">
+
+	
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/styles/darcula.min.css">
+
+	
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css">
+
+	
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/themes/prism.min.css">
+
+	
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/plugins/line-numbers/prism-line-numbers.min.css">
+
+
+
+	
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+
+	
+<script src="https://cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js"></script>
+
+	
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/highlight.min.js"></script>
+
+	
+<script src="https://cdn.jsdelivr.net/npm/jquery-pjax@2.0.1/jquery.pjax.min.js"></script>
+
+	
+<script src="/js/main.js"></script>
+
+
+	<!-- Mermaid JS -->
+	<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9/dist/mermaid.min.js"></script>
+	<!-- D3.js -->
+	<script src="https://d3js.org/d3.v6.min.js"></script>
+
+	<script>
+		// Define the function globally
+		(function(d3) {
+		function initializeZoom(d3) {
+				// Apply the zoom behavior to each SVG
+				document.querySelectorAll("pre.mermaid svg").forEach(svg => {
+				const zoomBehavior = d3.zoom().on("zoom", (event) => {
+					d3.select(svg).select('g').attr("transform", event.transform);
+				});
+				d3.select(svg).call(zoomBehavior).on("dblclick.zoom", null);
+				});
+			console.log('Zoom initialized.');
+		}
+
+		document.addEventListener('DOMContentLoaded', function() {
+			mermaid.initialize({ startOnLoad: true, theme: 'forest' });
+
+			// Polling for SVG rendering
+			const checkRender = setInterval(() => {
+				if (document.querySelector("pre.mermaid svg")) {
+					clearInterval(checkRender);
+					// Pass the d3 object to initializeZoom
+					initializeZoom(d3);
+				}
+			}, 300); // Check every 300 milliseconds
+		});
+		})(window.d3);
+	</script>
+
+
+	
+	
+
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+<body>
+	<header id="header">
+    <a id="title" href="/" class="logo">Sisyphus</a>
+
+	<ul id="menu">
+    
+
+    
+      <li class="menu-item">
+        <a href="/tags" class="menu-item-link">标签</a>
+      </li>
+    
+
+    
+      <li class="menu-item">
+        <a href="/categories" class="menu-item-link">分类</a>
+      </li>
+    
+
+    
+  
+    
+      <li class="menu-item">
+        <a href='https://github.com/sisyphus1212' class="menu-item-link" target="_blank">
+          <i class="fa fa-github fa-2x"></i>
+        </a>
+      </li>
+    
+	</ul>
+</header>
+
+	
+<div id="sidebar">
+	<button id="sidebar-toggle" class="toggle" ><i class="fa fa-arrow-right " aria-hidden="true"></i></button>
+	
+	<div id="site-toc">
+		<input id="search-input" class="search-input" type="search" placeholder="按回车全站搜索">
+		<div id="tree">
+			
+
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										DOCA
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/DOCA/virtio-net-controller/">
+                     
+										    virtio-net-controller
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/DOCA/%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/">
+                     
+										    基本操作
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										dpdk
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/dpdk/dpdk%20vhost_user%E5%8D%8F%E8%AE%AE/">
+                     
+										    vhost_user协议
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/dpdk/dpdk_iova/">
+                     
+										    dpdk_iova
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/dpdk/dpdk_legacy_memory/">
+                     
+										    dpdk_legacy_memory
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/03/19/dpdk/dpdk_mbuf_%E7%BB%93%E6%9E%84/">
+                     
+										    dpdk mbuf 结构
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/dpdk/dpdk_memzone_mpool_mbuf%E5%85%B3%E7%B3%BB%E6%A2%B3%E7%90%86/">
+                     
+										    dpdk_memzone_mpool_mbuf关系梳理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/03/19/dpdk/dpdk_vdpa%E7%83%AD%E8%BF%81%E7%A7%BB-%E8%84%8F%E9%A1%B5%E6%A0%87%E8%AE%B0/">
+                     
+										    dpdk_vdpa热迁移-脏页标记
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/dpdk/dpdk%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/">
+                     
+										    dpdk 内存管理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/dpdk/dpdk%E6%B5%8B%E8%AF%95%E7%94%A8%E4%BE%8B/">
+                     
+										    dpdk测试用例
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/03/19/dpdk/dpdk%E7%BC%96%E8%AF%91/">
+                     
+										    dpdk 编译
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/03/19/dpdk/dpdk%E7%BD%91%E7%BB%9C%E8%AE%BE%E5%A4%87%E5%88%9D%E5%A7%8B%E5%8C%96%E9%80%BB%E8%BE%91/">
+                     
+										    dpdk 编译
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/03/19/dpdk/testpmd%E4%BD%BF%E7%94%A8/">
+                     
+										    testpmd使用
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/dpdk/vhost_user_virtio_net%E5%90%8E%E7%AB%AF%E9%80%BB%E8%BE%91/">
+                     
+										    dpdk 编译
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										github
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2020/11/01/github/git%20%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/">
+                     
+										    git 常用命令
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										linux
+									</a>
+									
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										内核-驱动
+									</a>
+									
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										common
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/common/%E5%86%85%E6%A0%B8%E6%89%93%E5%8D%B0%E6%A0%BC%E5%BC%8F/">
+                     
+										    内核打印格式化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/11/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/common/%E9%A9%B1%E5%8A%A8%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7/">
+                     
+										    驱动开发技巧
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										cpu
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/cpu/cpu%E4%B8%8A%E4%B8%8B%E7%BA%BF/">
+                     
+										    cpu上下线
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										dma
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/dma/gfp/">
+                     
+										    gfp
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/dma/iommu%E6%B5%81%E7%A8%8B/">
+                     
+										    iommu流程
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/dma/scatterlist/">
+                     
+										    scatterlist
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										iommu
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/iommu/intel_iommu%E5%AF%84%E5%AD%98%E5%99%A8%E8%A7%84%E8%8C%83/">
+                     
+										    intel_iommu寄存器规范
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/iommu/iommu/">
+                     
+										    iommu
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/iommu/ioremap/">
+                     
+										    ioremap
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										napi
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/napi/napi/">
+                     
+										    napi
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/pcie/">
+                     
+										    pcie
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/pcie_hotplug/">
+                     
+										    pcie_hotplug
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/per_cpu/">
+                     
+										    per_cpu
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										udev
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-0/">
+                     
+										    linux_udev机制实现-0
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-1/">
+                     
+										    linux_udev机制实现-1
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file active">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-2/">
+                     
+										    linux_udev机制实现-2
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-3/">
+                     
+										    linux_udev机制实现-3
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/udev_rules%E7%AE%80%E4%BB%8B/">
+                     
+										    udev机制实现
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/uevent%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0/">
+                     
+										    uevent接口实现
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										virtio
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/virtio/virtio_net/">
+                     
+										    virtio_net
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										中断
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/armv8%E4%B8%AD%E6%96%AD%E7%8E%B0%E5%9C%BA%E4%BF%9D%E5%AD%98%E5%AF%84%E5%AD%98%E5%99%A8/">
+                     
+										    armv8中断现场保存寄存器
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/armv8%E8%AE%BE%E5%A4%87%E6%A0%91%E8%A7%A3%E6%9E%90/">
+                     
+										    armv8设备树解析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/msi_domain_alloc/">
+                     
+										    msi_domain_alloc
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/09/11/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E5%86%85%E6%A0%B8preempt/">
+                     
+										    内核preempt
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E6%89%93%E5%8D%B0%E5%86%85%E6%A0%B8%E5%87%BD%E6%95%B0%E5%A4%84%E4%BA%8E%E4%BB%80%E4%B9%88%E4%B8%8A%E4%B8%8B%E6%96%87/">
+                     
+										    打印内核函数处于什么上下文
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--allocated_irqs%E4%B8%8Eirq_desc%E6%95%B0%E7%BB%84%E5%A6%82%E4%BD%95%E5%8D%8F%E5%90%8C%E5%B7%A5%E4%BD%9C/">
+                     
+										    硬中断--allocated_irqs与irq_desc数组如何协同工作
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--apic/">
+                     
+										    硬中断--apic
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--asm_do_IRQ/">
+                     
+										    硬中断--asm_do_IRQ
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--ioapic/">
+                     
+										    硬中断--ioapic
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--irq_domain%E7%9A%84%E5%88%9D%E5%A7%8B%E5%8C%96/">
+                     
+										    硬中断--irq_domain的初始化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--irq_exit/">
+                     
+										    硬中断--irq_exit
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--irq_matrix%E7%BB%93%E6%9E%84%E4%BD%93/">
+                     
+										    硬中断--irq_matrix结构体
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--x86%E4%B8%AD%E6%96%AD%E5%88%9D%E5%A7%8B%E5%8C%96/">
+                     
+										    硬中断--x86中断初始化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--%E4%B8%AD%E6%96%AD%E5%8F%B7%E6%98%A0%E5%B0%84/">
+                     
+										    硬中断--中断号映射
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--%E5%88%9D%E5%A7%8B%E5%8C%96/">
+                     
+										    硬中断--初始化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/">
+                     
+										    硬中断--数据结构
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--%E7%A1%AC%E4%B8%AD%E6%96%AD%E5%8F%B7%E7%9A%84%E8%A7%A3%E6%9E%90/">
+                     
+										    硬中断--硬中断号的解析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--__do_softirq/">
+                     
+										    __do_softirq 分析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--__raise_softirq/">
+                     
+										    __raise_softirq 分析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--ksoftirqd/">
+                     
+										    ksoftirqd 分析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--net_rx_action/">
+                     
+										    net_rx_action 分析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--wakeup_softirqd/">
+                     
+										    软中断--wakeup_softirqd
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2%E6%8E%A5%E5%8F%A3/">
+                     
+										    软中断上下文切换接口
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/09/11/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--%E4%BD%BF%E7%94%A8%E5%8E%9F%E5%88%99/">
+                     
+										    软中断使用原则
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/11/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%BF%AE%E6%94%B9%E4%BB%BB%E6%84%8FLinux%E8%BF%9B%E7%A8%8B%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4%E5%AE%9E%E6%96%BD%E4%BB%A3%E7%A0%81%E6%B3%A8%E5%85%A5/">
+                     
+										    修改任意Linux进程地址空间实施代码注入
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										设备驱动
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2022/09/02/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/linux%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8resource/">
+                     
+										    linux设备驱动resource
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										系统启动
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8/%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E7%9B%B8%E5%85%B3/">
+                     
+										    系统启动相关
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										系统基础
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/08/29/linux/%E7%B3%BB%E7%BB%9F%E5%9F%BA%E7%A1%80/Linux%E4%B8%8B%E7%9A%84%E6%97%B6%E9%92%9F/">
+                     
+										    Linux下的时钟
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E7%B3%BB%E7%BB%9F%E5%9F%BA%E7%A1%80/ptp%E6%97%B6%E9%92%9F%E5%90%8C%E6%AD%A5%E4%BB%8B%E7%BB%8D/">
+                     
+										    ptp时钟同步介绍
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/03/08/linux/%E7%B3%BB%E7%BB%9F%E5%9F%BA%E7%A1%80/ubuntu%E5%86%85%E6%A0%B8%E6%9E%84%E5%BB%BA/">
+                     
+										    ubuntu内核构建
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/03/08/linux/%E7%B3%BB%E7%BB%9F%E5%9F%BA%E7%A1%80/ubuntu%E5%8F%91%E8%A1%8C%E7%89%88%E6%9C%AC/">
+                     
+										    ubuntu发行版本
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										网络协议
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/03/14/linux/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/perf%E6%8A%93%E5%8F%96%E6%94%B6%E5%8F%91%E5%8C%85%E6%B5%81%E7%A8%8B/">
+                     
+										    收发包流程
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/tcp%E7%AA%97%E5%8F%A3%E6%9C%BA%E5%88%B6/">
+                     
+										    tcp窗口机制
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/%E5%8D%8F%E8%AE%AE%E6%A0%88%E6%B5%81%E7%A8%8B/">
+                     
+										    协议栈流程
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2018/12/17/linux/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/%E5%8D%8F%E8%AE%AE%E6%A0%88%E8%B0%83%E4%BC%98%E5%8C%96tx/">
+                     
+										    [译] Linux 网络栈监控和调优：发送数据（2017）
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										network
+									</a>
+									
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										base_knowledge
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/network/base_knowledge/tun%20%E4%B8%8E%20tap%20%E8%AE%BE%E5%A4%87%EF%BC%8C%E7%BD%91%E6%A1%A5%E3%80%81VLAN%E3%80%81bonding%20%E7%9A%84%E5%AD%A6%E4%B9%A0/">
+                     
+										    linux内核网络设备
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2019/07/20/network/base_knowledge/%E7%BD%91%E5%8D%A1%20promiscuous%20mode%20%E4%B8%8E%20MAC%20%E7%9A%84%E4%B8%80%E4%BA%9B%20filter%20%E5%8A%9F%E8%83%BD/">
+                     
+										    linux内核网络设备
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										debug
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2020/11/01/network/debug/dropwatch_%E7%9B%91%E6%8E%A7%E5%86%85%E6%A0%B8%E7%9A%84%E7%BD%91%E7%BB%9C%E6%A0%88%E4%B8%A2%E5%8C%85/">
+                     
+										    dropwatch 监控内核的网络栈丢包
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										ethtool
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/11/03/network/ethtool/ethtool_dump_%E7%BD%91%E5%8D%A1%E5%AF%84%E5%AD%98%E5%99%A8/">
+                     
+										    ethtool 代码架构
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/11/04/network/ethtool/ethtool_%E7%9A%84%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/">
+                     
+										    ethtool_的工作原理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										kernel网络
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2022/09/07/network/kernel%E7%BD%91%E7%BB%9C/Linux%E7%BD%91%E5%8D%A1%E9%87%8D%E5%91%BD%E5%90%8D/">
+                     
+										    Linux 网卡重命名
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2019/09/07/network/kernel%E7%BD%91%E7%BB%9C/iproute2%E4%BD%BF%E7%94%A8--nat%E7%BD%91%E6%A1%A5%E9%85%8D%E7%BD%AE/">
+                     
+										    iproute2使用--nat网桥配置
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/18/network/kernel%E7%BD%91%E7%BB%9C/rss_rps_rfs/">
+                     
+										    Linux 网卡rss,rps,rfs
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/17/network/kernel%E7%BD%91%E7%BB%9C/%E5%86%85%E6%A0%B8%E6%97%A5%E5%BF%97%E6%89%93%E5%8D%B0%E9%99%90%E9%80%9F/">
+                     
+										    内核日志打印限速
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/network/kernel%E7%BD%91%E7%BB%9C/%E5%8F%8C%E7%BD%91%E5%8D%A1%E7%9A%84bounding%E6%A8%A1%E5%BC%8F/">
+                     
+										    双网卡的bounding模式
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/network/kernel%E7%BD%91%E7%BB%9C/%E7%BD%91%E7%BB%9C%E4%B8%A2%E5%8C%85%E6%95%85%E9%9A%9C%E5%AE%9A%E4%BD%8D%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">
+                     
+										    网络丢包故障定位全景指南
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/17/network/kernel%E7%BD%91%E7%BB%9C/%E9%80%9A%E8%BF%87%E9%A9%B1%E5%8A%A8%E6%9D%A5%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AAeth_device/">
+                     
+										    通过驱动来创建一个eth device
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/network/p4%E7%A8%8B%E5%BA%8F%E7%9A%84%E8%B5%84%E6%BA%90%E4%BC%98%E5%8C%96%E6%8C%87%E5%8D%97/">
+                     
+										    p4程序的资源优化指南
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										rte_kni
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2022/09/07/network/rte_kni/dpdk%20kni%20%E8%99%9A%E6%8B%9F%E7%BD%91%E7%BB%9C%E6%8E%A5%E5%8F%A3%E5%8E%9F%E7%90%86/">
+                     
+										    dpdk 程序kni 虚拟网络接口原理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/07/network/rte_kni/dpdk%20%E7%A8%8B%E5%BA%8F%E5%AF%B9pause%20%E5%B8%A7%E7%9A%84%E5%A4%84%E7%90%86/">
+                     
+										    dpdk 程序对pause 帧的处理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/07/network/rte_kni/%E9%80%9A%E8%BF%87slabinfo%E5%AE%9A%E4%BD%8D%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98/">
+                     
+										    dpdk 程序创建 kni 虚拟网络接口失败的问题
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/network/%E5%B8%B8%E7%94%A8%E7%BD%91%E7%BB%9C%E6%95%85%E9%9A%9C%E6%8E%92%E6%9F%A5%E5%B7%A5%E5%85%B7/">
+                     
+										    常用网络故障排查工具
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										other
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/11/01/other/c%E8%AF%AD%E8%A8%80%E6%99%BA%E8%83%BD%E6%8C%87%E9%92%88/">
+                     
+										    c语言-智能指针的用法
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/03/18/other/frpc%E6%9E%81%E7%AE%80%E9%83%A8%E7%BD%B2/">
+                     
+										    frpc极简部署
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/other/githubpage-vscocd-hexo%E6%9E%84%E5%BB%BA%E7%AC%94%E8%AE%B0%E5%8D%9A%E5%AE%A2/">
+                     
+										    githubpage+vscocd+hexo构建笔记博客
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										graphviz
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/other/graphviz/graphviz/">
+                     
+										    graphviz
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/05/24/other/graphviz/tips/">
+                     
+										    graphviz—tips
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/03/11/other/vscode_git_auto_push/">
+                     
+										    vscode-git-自动push
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/other/windows_treminal/">
+                     
+										    windows terminal技巧
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										pcie
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/pcie/dmar--root_table/">
+                     
+										    dmar--root_table
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/pcie/pasid/">
+                     
+										    pasid
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										qemu
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/IPI%E4%B8%AD%E6%96%AD%E6%80%A7%E8%83%BD%E8%AF%84%E4%BC%B0/">
+                     
+										    IPI中断性能评估
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/Kick_vcpu/">
+                     
+										    Kick_vcpu
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/qemu/dhcp%E6%9C%8D%E5%8A%A1%E5%BF%AB%E9%80%9F%E9%83%A8%E7%BD%B2/">
+                     
+										    为qemu运行快速部署dhcp服务
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/gust%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/">
+                     
+										    gust内存管理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/kvm/">
+                     
+										    kvm
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/qemu%20vhost_user%E7%9A%84%E5%88%9D%E5%A7%8B%E5%8C%96%E9%80%BB%E8%BE%91/">
+                     
+										    qemu vhost_user的初始化逻辑
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/qemu/qemu-kvm%E5%86%85%E5%AD%98%E8%99%9A%E6%8B%9F%E5%8C%96/">
+                     
+										    qemu-kvm 内存虚拟化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/qemu/qemu%E5%88%9D%E5%A7%8B%E5%8C%96/">
+                     
+										    qemu 初始化流程
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/qemu/qemu%E5%90%8E%E7%AB%AF%E5%86%99%E6%B8%85%E9%99%A4%E6%9C%BA%E5%88%B6/">
+                     
+										    qemu后端写清除机制
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/07/21/qemu/qemu%E8%BF%90%E8%A1%8Cvirtio_net%E7%9A%84%E5%87%A0%E7%A7%8D%E6%A8%A1%E5%BC%8F/">
+                     
+										    qemu运行virtio_net的几种模式
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/qom%E6%A8%A1%E5%9E%8B/">
+                     
+										    qom模型
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/vcpu%E8%BF%81%E7%A7%BB/">
+                     
+										    vcpu迁移
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/vmcs/">
+                     
+										    vmcs
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/%E4%B8%AD%E6%96%AD%E8%99%9A%E6%8B%9F%E5%8C%96/">
+                     
+										    中断虚拟化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										性能优化
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/09/24/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/cpu%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/">
+                     
+										    cpu性能优化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/perf%E6%80%A7%E8%83%BD%E8%A7%82%E6%B5%8B/">
+                     
+										    perf性能观测
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E5%8F%AF%E8%A7%82%E6%B5%8B%E5%B7%A5%E5%85%B7/">
+                     
+										    可观测工具
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										硬件相关
+									</a>
+									
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										dram
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/dram/DRAM%E5%9F%BA%E6%9C%AC%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/">
+                     
+										    DRAM基本工作原理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/pcie%20%E5%87%80%E8%BD%BD%E8%8D%B7%E8%BD%AC%E5%8F%91%E5%B8%A6%E5%AE%BD/">
+                     
+										    pcie 净载荷转发带宽
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										pcie
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/03/23/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/pcie/PCIe%20ECAM%E4%BB%8B%E7%BB%8D/">
+                     
+										    PCIe ECAM介绍
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/pcie/tlp/">
+                     
+										    tlp
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/08/29/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/rmii/">
+                     
+										    rmii
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/06/29/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/serders%E5%8E%9F%E7%90%86/">
+                     
+										    serder
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										虚拟化
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/09/20/%E8%99%9A%E6%8B%9F%E5%8C%96/pcie_%E8%99%9A%E6%8B%9F%E5%8C%96/">
+                     
+										    pcie 入门
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/09/20/%E8%99%9A%E6%8B%9F%E5%8C%96/vdpa/">
+                     
+										    vdpa代码逻辑
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/07/23/%E8%99%9A%E6%8B%9F%E5%8C%96/virtio/">
+                     
+										    virtio 协议
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E8%99%9A%E6%8B%9F%E5%8C%96/virtio_pci/">
+                     
+										    virtio_pci
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E8%99%9A%E6%8B%9F%E5%8C%96/%E4%B8%AD%E6%96%AD%E8%99%9A%E6%8B%9F%E5%8C%96/">
+                     
+										    中断虚拟化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E8%99%9A%E6%8B%9F%E5%8C%96/%E5%86%85%E6%A0%B8%E7%9A%84vdpa%E6%96%B9%E6%A1%88/">
+                     
+										    内核的vdpa方案
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/03/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB%E4%BB%A3%E7%A0%81%E9%80%BB%E8%BE%91/">
+                     
+										    热迁移代码逻辑
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										热迁移
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/03/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/0-%E6%80%BB%E4%BD%93%E4%BB%8B%E7%BB%8D/">
+                     
+										    热迁移代码逻辑
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/1-%E5%86%85%E5%AD%98%E7%83%AD%E8%BF%81%E7%A7%BB/">
+                     
+										    内存热迁移
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/1.1-%E5%9F%BA%E7%A1%80%E7%94%A8%E6%B3%95/">
+                     
+										    内存热迁移-基础用法
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/1.2-%E8%84%8F%E9%A1%B5%E6%A0%87%E8%AE%B0/">
+                     
+										    内存热迁移-脏页标记
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/2-%E8%AE%BE%E5%A4%87%E7%83%AD%E8%BF%81%E7%A7%BB/">
+                     
+										    设备热迁移
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/%E8%AE%BE%E5%A4%87%E7%83%AD%E8%BF%81%E7%A7%BBqemu%E4%B8%8Edpdk%E9%80%9A%E8%BF%87vhost_user%E7%9A%84%E4%BA%A4%E4%BA%92%E6%B5%81%E7%A8%8B/">
+                     
+										    设备热迁移qemu与dpdk通过vhost_user的交互流程
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										读书笔记
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/11/18/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/%E5%BA%B7%E5%BE%B7/">
+                     
+										    纯粹理性批判
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										软件开发
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/07/11/%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91/gdb/">
+                     
+										    常用调试方法
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/10/01/%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91/github_action/">
+                     
+										    github action使用介绍
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2020/11/01/%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91/git%E5%B8%B8%E7%94%A8/">
+                     
+										    git 常用命令
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+		</div>
+	</div>
+</div>
+
+
+
+	<!-- 引入正文 -->
+	<div id="content" class="content">
+		<h1 id="article-title">
+	linux_udev机制实现-2
+</h1>
+
+<!-- meta -->
+<div class="article-meta">
+	
+
+	<span>liaocj</span>
+	<span>2022-09-20 16:04:03</span>
+
+  <div id="article-categories">
+    
+		  <span>Categories：</span>
+      
+          
+              <span>
+                  <i class="fa fa-folder" aria-hidden="true">
+                  <a href="/categories/linux/">linux</a>
+                  </i>
+                
+                  >
+                
+              </span>
+          
+      
+          
+              <span>
+                  <i class="fa fa-folder" aria-hidden="true">
+                  <a href="/categories/linux/网络开发/">网络开发</a>
+                  </i>
+                
+                  >
+                
+              </span>
+          
+      
+          
+              <span>
+                  <i class="fa fa-folder" aria-hidden="true">
+                  <a href="/categories/linux/网络开发/驱动/">驱动</a>
+                  </i>
+                
+                  >
+                
+              </span>
+          
+      
+          
+              <span>
+                  <i class="fa fa-folder" aria-hidden="true">
+                  <a href="/categories/linux/网络开发/驱动/udev/">udev</a>
+                  </i>
+                
+              </span>
+          
+      
+    
+
+    
+		    <span>Tags：</span>
+        
+            
+                <span>
+                    <i class="fa fa-tag" aria-hidden="true">
+                    <a href="/tags/kernel/">kernel</a>
+                    </i>
+                </span>
+            
+        
+            
+                <span>
+                    <i class="fa fa-tag" aria-hidden="true">
+                    <a href="/tags/netlink/">netlink</a>
+                    </i>
+                </span>
+            
+        
+            
+                <span>
+                    <i class="fa fa-tag" aria-hidden="true">
+                    <a href="/tags/linux驱动/">linux驱动</a>
+                    </i>
+                </span>
+            
+        
+    
+  </div>
+
+</div>
+
+<!-- content -->
+<div id="article-content">
+	<h2 id="linux-udev-机制-2-实现原理"><a href="#linux-udev-机制-2-实现原理" class="headerlink" title="linux udev 机制-2-实现原理"></a>linux udev 机制-2-实现原理</h2><p>经过前面章节的铺垫，对于 udev 以及 udev 的 rules 编写已经有了一个基本的概念，足够应付一些简单的应用场景，但是，这是不够的，作为一名合格的软件工程师，尤其是嵌入式软件工程师，必须深入到实现原理，了解 udev 的来龙去脉。</p>
+<h2 id="内核对设备的处理"><a href="#内核对设备的处理" class="headerlink" title="内核对设备的处理"></a>内核对设备的处理</h2><p>在 udev 系列的第一章中，我们就提到：对于支持热拔插的设备，先需要在设备树中进行注册，当设备硬件上连接到系统上时，通常硬件上就可以检测到设备的插入，通常是产生硬件中断事件，内核的中断处理中就会匹配到设备相应的驱动程序并执行，这个过程就属于内核中对设备的处理。</p>
+<p>内核中的驱动程序负责初始化设备，同时提供设备操作接口并导出到用户空间，实际上，内核是完全有权限直接在用户空间创建设备接口的，而且 devfs 也是这么做的，但是后续证明这一部分工作完全是可以在用户空间做的，也可以更灵活地实现，同时 devfs 本身也有各种各样的问题，也就推进了 udev 的发展，因此，2.6 之后的版本中，设备接口由 udevd 守护进程在用户空间接管。</p>
+<p>之前是直接通过内核创建，现在改为由用户空间管理，然而用户空间自然是无法接触到内核信息的，因此，需要实现内核与用户空间之间的通信，linux 中采用的是 netlink 套接字机制，这是一种异步通信机制，对于 netlink 套接字的介绍和使用，可以参<a target="_blank" rel="noopener" href="https://github.com/sisyphus1212/bloc_test/tree/master/brief_record/linux_driver/linux_udev_mech/uevent/netlink">https://github.com/sisyphus1212/bloc_test/tree/master/brief_record/linux_driver/linux_udev_mech/uevent/netlink</a> 详细地说明了 netlink 如何实现用户与内核、用户与用户之间的通信。</p>
+<p>另一个必要重要的点是，内核与用户之间传递了什么数据？对于设备的变动，在内核中为描述为设备事件，而 kuevent 事件机制专门用来处理内核事件，kuevent 是建立在 kobject&#x2F;kset 结构之上的，也就是和 sysfs 强相关的。</p>
+<p>对于某些行为，kuevent 会自动通过 netlink 将数据发送到用户空间，比如当驱动中直接或间接地调用了 kset_create_and_add 接口时，最终会调用到 kobject_uevent 函数，该函数负责设备信息的发送。同时，驱动程序中也可以显式地调用 kobject_uevent 相关的接口，直接发送设备消息到用户空间。关于内核的 kuevent 机制以及 kuevent 的实现，可以参考<a target="_blank" rel="noopener" href="https://github.com/sisyphus1212/bloc_test/tree/master/demo_code/kobject_and_kset%E3%80%82">https://github.com/sisyphus1212/bloc_test/tree/master/demo_code/kobject_and_kset。</a></p>
+<p>netlink 属于套接字的一种，用户空间的 udevd 守护进程一直在监听该套接字，也就能收到对应的内核消息。内核消息的格式通常是这样的:TODO.</p>
+<p>同时内核发送消息是广播的形式，你甚至可以自己实现一个应用程序来监听内核消息。如果你想在用户空间监听内核消息，可以试试我提供的这个 netlink server 端程序，用它来监听内核的 netlink 设备信息。<a target="_blank" rel="noopener" href="https://github.com/sisyphus1212/bloc_test/tree/master/brief_record/linux_driver/linux_udev_mech/uevent/netlink">https://github.com/sisyphus1212/bloc_test/tree/master/brief_record/linux_driver/linux_udev_mech/uevent/netlink</a></p>
+<p>在内核发送的消息中，有三个关键字是固定存在的：ACTION&#x3D;,DEVPATH&#x3D;,SUBSYSTEM&#x3D;,同时内核中也可以以键值对的方式自定义地添加关键字，比如 driver&#x3D;，这些关键字将会自动地添加到 udev 的关键字列表中，而在用户空间的 udev rules 文件中，匹配字段和关键字远远不止这几个，这是因为 udev 本身支持一些默认的、自定义的关键字，并不是所有匹配关键字都是由内核提供的，比如 KERNEL&#x3D;，这是 udev 通过判断设备内核名称所创建的关键字，在内核信息中是不包含 KERNEL&#x3D; 这个关键字的,所以如果要完全了解 udev 的配置项,除了了解内核发送的 netlink 消息,同时需要了解 udev 本身对设备的处理。</p>
+<h2 id="udevd-处理设备数据"><a href="#udevd-处理设备数据" class="headerlink" title="udevd 处理设备数据"></a>udevd 处理设备数据</h2><p>udev 软件上的实现分为两部分,一个是 udevd 守护进程,负责监听内核套接字,接收内核信息并处理,另一部分是客户端程序,客户端程序通过和守护进程交互获取设备信息或者对设备进行操作.</p>
+<p>在实际的实现中,存在一个问题:在开机启动时,内核会首先对所有设备进行枚举并逐个初始化,而这个时候用户空间还没有启动,udevd 自然也是没有启动的,所以在 udevd 真正被启动时,大部分的系统设备已经初始化完成,udevd 也错过了所有内核发送的设备事件信息.对于这个问题,内核是通过 sysfs 解决的,内核将设备相关的信息导出到 sysfs 中,在 udevd 启动时,通过读取 sysfs 文件系统就可以获取到设备信息,同时,使用客户端程序 udevadm trigger 命令重新生成设备事件,使用 udevadm 工具模拟内核发送设备事件的行为,让 udevd 重新处理错过的那些设备事件.</p>
+<h2 id="udevadm"><a href="#udevadm" class="headerlink" title="udevadm"></a>udevadm</h2><p>udevadm 是官方提供的一个用于调试管理 udevd 的一个客户端程序,集成了数据库查询,监视,触发等关键功能,下面是 udevadm 的相关使用方法.</p>
+<h3 id="udevadm-info"><a href="#udevadm-info" class="headerlink" title="udevadm info"></a>udevadm info</h3><p>对于 udevd 接收到的设备信息,会把它们存放到 udev 数据库中,使用客户端程序可以实现对数据库的操作,udevadm info 指令用于查询数据库内容.udevadm info 的指令格式如下:</p>
+<pre class="line-numbers language-none"><code class="language-none">udevadm info [options] [devpath|file|unit...]<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>udevadm info 带有一个选项和查询对象,这个对象可以是 &#x2F;dev 目录下的某个设备,也可以是 &#x2F;sys 目录下的某个路径,同时也支持 systemd 中的设备描述文件(必须以.device)结尾.</p>
+<p>udevadm info 支持以下选项:</p>
+<ul>
+<li>-q,–query&#x3D;TYPE:查询的指定类型的设备,TYPE 可以是下列值之一： name, symlink, path, property, all(默认值)</li>
+<li>-p,–path&#x3D;DEVPATH:指定目标设备在 &#x2F;sys 目录下的路径,因此可以省略 &#x2F;sys 目录前缀,udevadm info –path&#x3D;&#x2F;class&#x2F;block&#x2F;sda 和 udevadm info &#x2F;sys&#x2F;class&#x2F;block&#x2F;sda 是等价的.</li>
+<li>-n,–name&#x3D;FILE:设备在 &#x2F;dev 目录下的名称,也可以是一个软链接,同样的 &#x2F;dev 目录前缀可以省略,udevadm info –name&#x3D;sda 和 udevadm info &#x2F;dev&#x2F;sda 是相等的.</li>
+<li>-r,–root:以绝对路径显示 –query&#x3D;name 与 –query&#x3D;symlink 的查询结果</li>
+<li>-a,–attribute-walk:按照udev规则的格式，显示所有可用于匹配该设备的sysfs属性： 从该设备自身开始，沿着设备树向上回溯(一直到树根)， 显示沿途每个设备的sysfs属性。</li>
+<li>-x,–export:以 键&#x3D;’值’ 的格式输出此设备的属性(注意，值两边有单引号界定)。 仅在指定了 –query&#x3D;property 或 –device-id-of-file&#x3D;FILE 的情况下才有效。</li>
+<li>-d, –device-id-of-file&#x3D;FILE:显示设备文件所在底层设备的主&#x2F;次设备号,如果使用了此选项，那么将忽略所有位置参数。</li>
+<li>-e, –export-db:导出数据库的全部内容</li>
+<li>-c,–cleanup-db:清除 udev 数据库.</li>
+</ul>
+<h3 id="udevadm-trigger"><a href="#udevadm-trigger" class="headerlink" title="udevadm trigger"></a>udevadm trigger</h3><p>udev 的另一个调试利器就是 udevadm trigger，在系统启动时 udevd 会在内核驱动都初始化完成之后再启动，也就监听不到系统启动时内核发送的设备信息，正是由 udevadm trigger 重新生成设备事件，对于 udevd 来说，将这些设备信息当成由内核发送的来处理。</p>
+<h3 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h3><p>一般systemd-udev-trigger.service中应用udevadm trigger回放coldplug：<br>ExecStart&#x3D;&#x2F;bin&#x2F;udevadm trigger –type&#x3D;subsystems –action&#x3D;add ; &#x2F;bin&#x2F;udevadm trigger –type&#x3D;devices –action&#x3D;add</p>
+<p>同时，在系统正常运行时，基于调试的目的，也完全可以触发某个设备事件来模拟热插拔，下面是 udevadm trigger 的使用方法：</p>
+<ul>
+<li>-v, –verbose：显示将会被触发的设备列表，该设备列表对应 &#x2F;sys&#x2F;devices 目录下的大部分设备文件。</li>
+<li>-n, –dry-run：执行触发的动作，但是最后并不真正触发设备事件，也就是在执行 udevadm trigger 的基础上，最后不将数据发出，其它操作照样执行。</li>
+<li>-t, –type&#x3D;TYPE：仅触发特定类型的设备，TYPE 可以是下列值之一： devices(默认值), subsystems</li>
+<li>-s, –subsystem-match&#x3D;SUBSYSTEM：仅触发属于 SUBSYSTEM 子系统的设备事件。 可以在 SUBSYSTEM 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 OR 逻辑连接每个匹配规则， 也就是说，所有匹配的子系统中的设备都会被触发。SUBSYSTEM 的值可以参考 udev 中的 rules 文件。</li>
+<li>-S, –subsystem-nomatch&#x3D;SUBSYSTEM：不触发属于 SUBSYSTEM 子系统的设备事件。 可以在 SUBSYSTEM 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 AND 逻辑连接每个匹配规则， 也就是说，只有不匹配所有指定子系统的设备才会被触发。</li>
+<li>-a, –attr-match&#x3D;ATTRIBUTE&#x3D;VALUE：仅触发那些在设备的sysfs目录中存在 ATTRIBUTE 文件的设备事件。 如果同时还指定了”&#x3D;VALUE”，那么表示仅触发那些 ATTRIBUTE 文件的内容匹配 VALUE 的设备事件。 注意，可以在 VALUE 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 AND 逻辑连接每个匹配规则， 也就是说，只有匹配所有指定属性的设备才会被触发。</li>
+<li>-A, –attr-nomatch&#x3D;ATTRIBUTE&#x3D;VALUE：不触发那些在设备的sysfs目录中存在 ATTRIBUTE 文件的设备事件。 如果同时还指定了”&#x3D;VALUE”，那么表示不触发那些 ATTRIBUTE 文件的内容匹配 VALUE 的设备事件。 注意，可以在 VALUE 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 AND 逻辑连接每个匹配规则， 也就是说，只有不匹配所有指定属性的设备才会被触发。</li>
+<li>-p, –property-match&#x3D;PROPERTY&#x3D;VALUE：仅触发那些设备的 PROPERTY 属性值匹配 VALUE 的设备事件。注意，可以在 VALUE 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 OR 逻辑连接每个匹配规则， 也就是说，匹配任意一个属性值的设备都会被触发。</li>
+<li>-g, –tag-match&#x3D;PROPERTY：仅触发匹配 PROPERTY 标签的设备事件。如果多次使用此选项， 那么表示以 AND 逻辑连接每个匹配规则，也就是说，只有匹配所有指定标签的设备才会被触发。</li>
+<li>-y, –sysname-match&#x3D;SYSNAME：仅触发设备sys名称(也就是该设备在 &#x2F;sys 路径下最末端的文件名)匹配 SYSNAME 的设备事件。 注意，可以在 SYSNAME 中使用shell风格的通配符。 如果多次使用此选项，那么表示以 OR 逻辑连接每个匹配规则， 也就是说，匹配任意一个sys名称的设备都会被触发。</li>
+<li>–name-match&#x3D;DEVPATH：触发给定设备及其所有子设备的事件。DEVPATH 是该设备在 &#x2F;dev 目录下的路径。 如果多次使用此选项，那么仅以最后一个为准。</li>
+<li>-b, –parent-match&#x3D;SYSPATH：触发给定设备及其所有子设备的事件。SYSPATH 是该设备在 &#x2F;sys 目录下的路径。 如果多次使用此选项，那么仅以最后一个为准。</li>
+<li>-w, –settle：除了触发设备事件之外，还要等待这些事件完成。 注意，此选项仅等待该命令自身触发的事件完成， 而 udevadm settle 则要一直等到 所有设备事件全部完成。</li>
+<li>–wait-daemon[&#x3D;SECONDS]：在触发设备事件之前，等待 systemd-udevd 守护进程完成初始化。 默认等待 5 秒之后超时(可以使用 SECONDS 参数修改)。 此选项等价于在 udevadm trigger 命令之前先使用 udevadm control –ping 命令。</li>
+</ul>
+<p>udevadm 的大部分指令都是为了实现灵活地触发设备事件而设计，有个印象就好，需要用到的时候使用 udevadm trigger -h 或者查找<a target="_blank" rel="noopener" href="https://www.freedesktop.org/software/systemd/man/udevadm.html">官方手册</a>就好。</p>
+<h3 id="udevadm-info-示例"><a href="#udevadm-info-示例" class="headerlink" title="udevadm info 示例"></a>udevadm info 示例</h3><p>使用 udevadm info 的目的在于查看设备保存在数据库中的信息，同样以 rtc 为例，看看 udevadm info 所展示的信息是否和内核设备事件发送的信息一致：</p>
+<pre class="line-numbers language-none"><code class="language-none">udevadm info -n &#x2F;dev&#x2F;rtc
+
+P: &#x2F;devices&#x2F;platform&#x2F;ocp&#x2F;44e3e000.rtc&#x2F;rtc&#x2F;rtc0
+N: rtc0
+L: -100
+S: rtc
+E: DEVLINKS&#x3D;&#x2F;dev&#x2F;rtc
+E: DEVNAME&#x3D;&#x2F;dev&#x2F;rtc0
+E: DEVPATH&#x3D;&#x2F;devices&#x2F;platform&#x2F;ocp&#x2F;44e3e000.rtc&#x2F;rtc&#x2F;rtc0
+E: MAJOR&#x3D;252
+E: MINOR&#x3D;0
+E: SUBSYSTEM&#x3D;rtc
+E: USEC_INITIALIZED&#x3D;2550426
+E: net.ifnames&#x3D;0<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>其中：</p>
+<ul>
+<li>P 表示 PATH，即设备路径</li>
+<li>N 表示 Name，对应设备内核名称</li>
+<li>L 表示 udev 中 OPTION 字段的 link_priority 属性，因为 rtc 是一个软链接，如果为多个不同的设备指定了相同的软连接， 那么实际的软连接将指向 link_priority 值最高的设备。</li>
+<li>S 表示 SUBSYSTEM，对应子系统的名称。</li>
+<li>E 表示 ENV，表示全局变量。</li>
+</ul>
+<p>同时，为了验证该设备触发时内核发送的消息，使用我自己编写的客户端程序(github地址:TODO)接收内核消息，然后使用 udevadm trigger –action&#x3D;add  &#x2F;dev&#x2F;rtc 触发 rtc 设备，得到的消息为：</p>
+<pre class="line-numbers language-none"><code class="language-none">add@&#x2F;devices&#x2F;platform&#x2F;ocp&#x2F;44e3e000.rtc&#x2F;rtc&#x2F;rtc0&#x2F;omap_rtc_scratch0 ACTION&#x3D;add DEVPATH&#x3D;&#x2F;devices&#x2F;platform&#x2F;ocp&#x2F;44e3e000.rtc&#x2F;rtc&#x2F;rtc0&#x2F;omap_rtc_scratch0 SUBSYSTEM&#x3D;nvmem SYNTH_UUID&#x3D;0 SEQNUM&#x3D;4270<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>在内核发送的消息中,包含 ACTION&#x3D;,DEVPATH&#x3D;,SUBSYSTEM&#x3D;,SYNTH_UUID&#x3D;,SEQNUM&#x3D; 等字段.其中,ACTION&#x3D;,SEQNUM&#x3D; 等字段是针对解析过程的,不需要持久地保存在数据库中.</p>
+<p>同时,在介绍 uevent 的文章中(TODO)有提到:内核在发送设备信息到用户空间时,默认存在三个字段:ACTION&#x3D;,DEVPATH&#x3D;,SUBSYSTEM&#x3D;,除此之外,用户还可以提供自定义的 uevent 函数添加字段,比如内核中大部分硬件设备都会添加 MAJOR&#x3D;,MINOR&#x3D;,DEVNAME&#x3D; 等字段,这些字段除了会被一起发送到用户空间,同时也会通过对应 &#x2F;sys 目录下的 uevent 文件导出,你可以通过查看 &#x2F;sys 下的各个 uevent 文件进行对比.</p>
+<p>经过对比发现,正如前文中所说的,udev 设备信息数据并非完全来自于内核消息,另外的部分可能来自于 &#x2F;sys 对应目录下设备文件,还有可能是由 udev 程序产生的,比如上文中的 USEC_INITIALIZED 环境变量,link_priority 的值.</p>
+<h3 id="udevadm-test"><a href="#udevadm-test" class="headerlink" title="udevadm test"></a>udevadm test</h3><p>如果要了解 udev 对内核事件的处理过程，可以通过 udevadm test 命令来实现，该命令模拟一个设备事件，并输出调试信息。</p>
+<p>下面是命令的格式：</p>
+<pre class="line-numbers language-none"><code class="language-none">udevadm test [options] [devpath]<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>模拟一个udev事件，打印出debug信息。</p>
+<p>常用：<br>udevadm test $(udevadm info -q path -n &#x2F;dev&#x2F;sda) 2&gt;&amp;1  ;加载前测试设备规则<br>udevadm test &#x2F;sys&#x2F;class&#x2F;block&#x2F;sda    ;也可指定设备路径，加载前测试设备规则<br>udevadm test-builtin [options] [command] devpath</p>
+<p>需要注意的是，这个命令只支持 &#x2F;sys 下的设备文件，而不支持 &#x2F;dev 目录下的设备节点，udevadm test 命令的输出为：</p>
+<ul>
+<li>哪些配置目录、文件的时间戳被更新，哪个配置文件将会使用</li>
+<li>依次输出 udev 扫描的 .rules 文件，尽管该 .rules 文件没有匹配成功。</li>
+<li>依次输出与当前设备匹配的规则，并打印该条规则属于哪个 .rules(规则文件) 的哪一行。</li>
+<li>输出当前设备匹配的配置文件</li>
+<li>输出当次设备事件的所有全局变量，这些全局变量以键值对的方式输出</li>
+</ul>
+
+</div>
+
+<!-- post-guide -->
+
+    <div class="post-guide">
+        <div class="item left">
+            
+              <a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-0/">
+                  <i class="fa fa-angle-left" aria-hidden="true"></i>
+                  linux_udev机制实现-0
+              </a>
+            
+        </div>
+        <div class="item right">
+            
+              <a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-1/">
+                linux_udev机制实现-1
+                <i class="fa fa-angle-right" aria-hidden="true"></i>
+              </a>
+            
+        </div>
+    </div>
+
+
+<!-- comment - giscus -->
+
+
+<!-- comment - valine -->
+
+
+<script>
+	
+	
+</script>
+	</div>
+	<div id="footer">
+	<p>
+	©<span id="footerYear-start"></span>-<span id="footerYear-end"></span>
+
+	
+	    <a href="/">liaocj</a>
+	
+
+	
+	<br>
+	Theme <a href="//github.com/sisyphus1212" target="_blank">Tree</a>
+	by <a href="//space.bilibili.com/228776952" target="_blank">liaocj</a>
+	Powered by <a href="//hexo.io" target="_blank">Hexo</a>
+	</p>
+</div>
+
+
+<script type="text/javascript">
+	document.getElementById('footerYear-start').innerHTML = new Date().getFullYear() + '';
+</script>
+
+<script type="text/javascript">
+	document.getElementById('footerYear-end').innerHTML = new Date().getFullYear() + '';
+</script>
+
+    <script src='https://unpkg.com/mermaid@7.1.2/dist/mermaid.min.js'></script>
+    <script>
+      if (window.mermaid) {
+        mermaid.initialize({theme: 'forest'});
+      }
+    </script>
+
+
+
+
+<script src='https://cdnjs.cloudflare.com/ajax/libs/viz.js/1.7.1/viz.js'></script>
+<script>
+  String.prototype.replaceAll = function(search, replacement) {
+	var target = this;
+	return target.split(search).join(replacement);
+  };
+  let vizObjects = document.querySelectorAll('.graphviz')
+  for (let item of vizObjects) {
+	let svg = undefined
+	try {
+	  svg = Viz(item.textContent.replaceAll('–', '--'), 'svg')
+	} catch(e) {
+	  svg = `<pre class="error">${e}</pre>`
+	}
+	item.outerHTML = svg
+  }
+</script>
+
+<!-- D3.js -->
+<script src="https://d3js.org/d3.v6.min.js"></script>
+
+<script>
+(function(d3) {
+    function initializeZoom(d3, svgElement) {
+        if (!svgElement) {
+            console.error('SVG element not found or passed incorrectly.');
+            return;
+        }
+
+        const zoomBehavior = d3.zoom()
+            .on('zoom', (event) => {
+                d3.select(svgElement).select('g').attr("transform", event.transform);
+            });
+
+        d3.select(svgElement).call(zoomBehavior).on("dblclick.zoom", null);
+        console.log('Zoom initialized on:', svgElement);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select the svg that contains #graph0 by using closest to find the parent SVG of #graph0
+        const graph0 = document.querySelector('#graph0');
+        if (graph0) {
+            const svgElement = graph0.closest('svg'); // Find the closest svg ancestor
+            if (svgElement) {
+                initializeZoom(d3, svgElement);
+            } else {
+                console.error('No SVG element found containing #graph0');
+            }
+        } else {
+            console.error('Element with id #graph0 not found.');
+        }
+    });
+})(window.d3);
+</script>
+
+	<button id="totop-toggle" class="toggle"><i class="fa fa-angle-double-up" aria-hidden="true"></i></button>
+</body>
+</html>

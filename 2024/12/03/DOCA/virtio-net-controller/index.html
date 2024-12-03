@@ -1,0 +1,2512 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+
+	<!-- title -->
+	
+	<title>
+	
+		virtio-net-controller |
+	
+	Sisyphus
+	</title>
+
+	<!-- keywords,description -->
+	
+	
+
+	<!-- favicon -->
+	
+	<link rel="shortcut icon" href="/favicon.png">
+	
+
+
+	<!-- search -->
+	<script>
+		var searchEngine = "";
+		if(typeof searchEngine == "undefined" || searchEngine == null || searchEngine == ""){
+			searchEngine = "https://www.google.com/search?q=";
+		}
+		var homeHost = "";
+		if(typeof homeHost == "undefined" || homeHost == null || homeHost == ""){
+			homeHost = window.location.host;
+		}
+	</script>
+
+
+	
+<link rel="stylesheet" href="/css/main.css">
+
+	
+<link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/4.7.0/css/font-awesome.min.css">
+
+	
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/styles/darcula.min.css">
+
+	
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css">
+
+	
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/themes/prism.min.css">
+
+	
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/plugins/line-numbers/prism-line-numbers.min.css">
+
+
+
+	
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"></script>
+
+	
+<script src="https://cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js"></script>
+
+	
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.17.1/build/highlight.min.js"></script>
+
+	
+<script src="https://cdn.jsdelivr.net/npm/jquery-pjax@2.0.1/jquery.pjax.min.js"></script>
+
+	
+<script src="/js/main.js"></script>
+
+
+	<!-- Mermaid JS -->
+	<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9/dist/mermaid.min.js"></script>
+	<!-- D3.js -->
+	<script src="https://d3js.org/d3.v6.min.js"></script>
+
+	<script>
+		// Define the function globally
+		(function(d3) {
+		function initializeZoom(d3) {
+				// Apply the zoom behavior to each SVG
+				document.querySelectorAll("pre.mermaid svg").forEach(svg => {
+				const zoomBehavior = d3.zoom().on("zoom", (event) => {
+					d3.select(svg).select('g').attr("transform", event.transform);
+				});
+				d3.select(svg).call(zoomBehavior).on("dblclick.zoom", null);
+				});
+			console.log('Zoom initialized.');
+		}
+
+		document.addEventListener('DOMContentLoaded', function() {
+			mermaid.initialize({ startOnLoad: true, theme: 'forest' });
+
+			// Polling for SVG rendering
+			const checkRender = setInterval(() => {
+				if (document.querySelector("pre.mermaid svg")) {
+					clearInterval(checkRender);
+					// Pass the d3 object to initializeZoom
+					initializeZoom(d3);
+				}
+			}, 300); // Check every 300 milliseconds
+		});
+		})(window.d3);
+	</script>
+
+
+	
+	
+
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+<body>
+	<header id="header">
+    <a id="title" href="/" class="logo">Sisyphus</a>
+
+	<ul id="menu">
+    
+
+    
+      <li class="menu-item">
+        <a href="/tags" class="menu-item-link">标签</a>
+      </li>
+    
+
+    
+      <li class="menu-item">
+        <a href="/categories" class="menu-item-link">分类</a>
+      </li>
+    
+
+    
+  
+    
+      <li class="menu-item">
+        <a href='https://github.com/sisyphus1212' class="menu-item-link" target="_blank">
+          <i class="fa fa-github fa-2x"></i>
+        </a>
+      </li>
+    
+	</ul>
+</header>
+
+	
+<div id="sidebar">
+	<button id="sidebar-toggle" class="toggle" ><i class="fa fa-arrow-right " aria-hidden="true"></i></button>
+	
+	<div id="site-toc">
+		<input id="search-input" class="search-input" type="search" placeholder="按回车全站搜索">
+		<div id="tree">
+			
+
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										DOCA
+									</a>
+									
+							<ul>
+								<li class="file active">
+									<a href="/2024/12/03/DOCA/virtio-net-controller/">
+                     
+										    virtio-net-controller
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/DOCA/%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/">
+                     
+										    基本操作
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										dpdk
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/dpdk/dpdk%20vhost_user%E5%8D%8F%E8%AE%AE/">
+                     
+										    vhost_user协议
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/dpdk/dpdk_iova/">
+                     
+										    dpdk_iova
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/dpdk/dpdk_legacy_memory/">
+                     
+										    dpdk_legacy_memory
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/03/19/dpdk/dpdk_mbuf_%E7%BB%93%E6%9E%84/">
+                     
+										    dpdk mbuf 结构
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/dpdk/dpdk_memzone_mpool_mbuf%E5%85%B3%E7%B3%BB%E6%A2%B3%E7%90%86/">
+                     
+										    dpdk_memzone_mpool_mbuf关系梳理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/03/19/dpdk/dpdk_vdpa%E7%83%AD%E8%BF%81%E7%A7%BB-%E8%84%8F%E9%A1%B5%E6%A0%87%E8%AE%B0/">
+                     
+										    dpdk_vdpa热迁移-脏页标记
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/dpdk/dpdk%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/">
+                     
+										    dpdk 内存管理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/dpdk/dpdk%E6%B5%8B%E8%AF%95%E7%94%A8%E4%BE%8B/">
+                     
+										    dpdk测试用例
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/03/19/dpdk/dpdk%E7%BC%96%E8%AF%91/">
+                     
+										    dpdk 编译
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/03/19/dpdk/dpdk%E7%BD%91%E7%BB%9C%E8%AE%BE%E5%A4%87%E5%88%9D%E5%A7%8B%E5%8C%96%E9%80%BB%E8%BE%91/">
+                     
+										    dpdk 编译
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/03/19/dpdk/testpmd%E4%BD%BF%E7%94%A8/">
+                     
+										    testpmd使用
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/dpdk/vhost_user_virtio_net%E5%90%8E%E7%AB%AF%E9%80%BB%E8%BE%91/">
+                     
+										    dpdk 编译
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										github
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2020/11/01/github/git%20%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/">
+                     
+										    git 常用命令
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										linux
+									</a>
+									
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										内核-驱动
+									</a>
+									
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										common
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/common/%E5%86%85%E6%A0%B8%E6%89%93%E5%8D%B0%E6%A0%BC%E5%BC%8F/">
+                     
+										    内核打印格式化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/11/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/common/%E9%A9%B1%E5%8A%A8%E5%BC%80%E5%8F%91%E6%8A%80%E5%B7%A7/">
+                     
+										    驱动开发技巧
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										cpu
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/cpu/cpu%E4%B8%8A%E4%B8%8B%E7%BA%BF/">
+                     
+										    cpu上下线
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										dma
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/dma/gfp/">
+                     
+										    gfp
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/dma/iommu%E6%B5%81%E7%A8%8B/">
+                     
+										    iommu流程
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/dma/scatterlist/">
+                     
+										    scatterlist
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										iommu
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/iommu/intel_iommu%E5%AF%84%E5%AD%98%E5%99%A8%E8%A7%84%E8%8C%83/">
+                     
+										    intel_iommu寄存器规范
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/iommu/iommu/">
+                     
+										    iommu
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/iommu/ioremap/">
+                     
+										    ioremap
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										napi
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/napi/napi/">
+                     
+										    napi
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/pcie/">
+                     
+										    pcie
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/pcie_hotplug/">
+                     
+										    pcie_hotplug
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/per_cpu/">
+                     
+										    per_cpu
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										udev
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-0/">
+                     
+										    linux_udev机制实现-0
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-1/">
+                     
+										    linux_udev机制实现-1
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-2/">
+                     
+										    linux_udev机制实现-2
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/linux_udev%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-3/">
+                     
+										    linux_udev机制实现-3
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/udev_rules%E7%AE%80%E4%BB%8B/">
+                     
+										    udev机制实现
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/udev/uevent%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0/">
+                     
+										    uevent接口实现
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										virtio
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/virtio/virtio_net/">
+                     
+										    virtio_net
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										中断
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/armv8%E4%B8%AD%E6%96%AD%E7%8E%B0%E5%9C%BA%E4%BF%9D%E5%AD%98%E5%AF%84%E5%AD%98%E5%99%A8/">
+                     
+										    armv8中断现场保存寄存器
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/armv8%E8%AE%BE%E5%A4%87%E6%A0%91%E8%A7%A3%E6%9E%90/">
+                     
+										    armv8设备树解析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/msi_domain_alloc/">
+                     
+										    msi_domain_alloc
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/09/11/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E5%86%85%E6%A0%B8preempt/">
+                     
+										    内核preempt
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E6%89%93%E5%8D%B0%E5%86%85%E6%A0%B8%E5%87%BD%E6%95%B0%E5%A4%84%E4%BA%8E%E4%BB%80%E4%B9%88%E4%B8%8A%E4%B8%8B%E6%96%87/">
+                     
+										    打印内核函数处于什么上下文
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--allocated_irqs%E4%B8%8Eirq_desc%E6%95%B0%E7%BB%84%E5%A6%82%E4%BD%95%E5%8D%8F%E5%90%8C%E5%B7%A5%E4%BD%9C/">
+                     
+										    硬中断--allocated_irqs与irq_desc数组如何协同工作
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--apic/">
+                     
+										    硬中断--apic
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--asm_do_IRQ/">
+                     
+										    硬中断--asm_do_IRQ
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--ioapic/">
+                     
+										    硬中断--ioapic
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--irq_domain%E7%9A%84%E5%88%9D%E5%A7%8B%E5%8C%96/">
+                     
+										    硬中断--irq_domain的初始化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--irq_exit/">
+                     
+										    硬中断--irq_exit
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--irq_matrix%E7%BB%93%E6%9E%84%E4%BD%93/">
+                     
+										    硬中断--irq_matrix结构体
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--x86%E4%B8%AD%E6%96%AD%E5%88%9D%E5%A7%8B%E5%8C%96/">
+                     
+										    硬中断--x86中断初始化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--%E4%B8%AD%E6%96%AD%E5%8F%B7%E6%98%A0%E5%B0%84/">
+                     
+										    硬中断--中断号映射
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--%E5%88%9D%E5%A7%8B%E5%8C%96/">
+                     
+										    硬中断--初始化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/">
+                     
+										    硬中断--数据结构
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E7%A1%AC%E4%B8%AD%E6%96%AD--%E7%A1%AC%E4%B8%AD%E6%96%AD%E5%8F%B7%E7%9A%84%E8%A7%A3%E6%9E%90/">
+                     
+										    硬中断--硬中断号的解析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--__do_softirq/">
+                     
+										    __do_softirq 分析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--__raise_softirq/">
+                     
+										    __raise_softirq 分析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--ksoftirqd/">
+                     
+										    ksoftirqd 分析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--net_rx_action/">
+                     
+										    net_rx_action 分析
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--wakeup_softirqd/">
+                     
+										    软中断--wakeup_softirqd
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2%E6%8E%A5%E5%8F%A3/">
+                     
+										    软中断上下文切换接口
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/09/11/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%B8%AD%E6%96%AD/%E8%BD%AF%E4%B8%AD%E6%96%AD--%E4%BD%BF%E7%94%A8%E5%8E%9F%E5%88%99/">
+                     
+										    软中断使用原则
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/11/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E4%BF%AE%E6%94%B9%E4%BB%BB%E6%84%8FLinux%E8%BF%9B%E7%A8%8B%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4%E5%AE%9E%E6%96%BD%E4%BB%A3%E7%A0%81%E6%B3%A8%E5%85%A5/">
+                     
+										    修改任意Linux进程地址空间实施代码注入
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										设备驱动
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2022/09/02/linux/%E5%86%85%E6%A0%B8-%E9%A9%B1%E5%8A%A8/%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/linux%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8resource/">
+                     
+										    linux设备驱动resource
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										系统启动
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/11/20/linux/%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8/%E7%B3%BB%E7%BB%9F%E5%90%AF%E5%8A%A8%E7%9B%B8%E5%85%B3/">
+                     
+										    系统启动相关
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										系统基础
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/08/29/linux/%E7%B3%BB%E7%BB%9F%E5%9F%BA%E7%A1%80/Linux%E4%B8%8B%E7%9A%84%E6%97%B6%E9%92%9F/">
+                     
+										    Linux下的时钟
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/linux/%E7%B3%BB%E7%BB%9F%E5%9F%BA%E7%A1%80/ptp%E6%97%B6%E9%92%9F%E5%90%8C%E6%AD%A5%E4%BB%8B%E7%BB%8D/">
+                     
+										    ptp时钟同步介绍
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/03/08/linux/%E7%B3%BB%E7%BB%9F%E5%9F%BA%E7%A1%80/ubuntu%E5%86%85%E6%A0%B8%E6%9E%84%E5%BB%BA/">
+                     
+										    ubuntu内核构建
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/03/08/linux/%E7%B3%BB%E7%BB%9F%E5%9F%BA%E7%A1%80/ubuntu%E5%8F%91%E8%A1%8C%E7%89%88%E6%9C%AC/">
+                     
+										    ubuntu发行版本
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										网络协议
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/03/14/linux/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/perf%E6%8A%93%E5%8F%96%E6%94%B6%E5%8F%91%E5%8C%85%E6%B5%81%E7%A8%8B/">
+                     
+										    收发包流程
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/tcp%E7%AA%97%E5%8F%A3%E6%9C%BA%E5%88%B6/">
+                     
+										    tcp窗口机制
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/linux/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/%E5%8D%8F%E8%AE%AE%E6%A0%88%E6%B5%81%E7%A8%8B/">
+                     
+										    协议栈流程
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2018/12/17/linux/%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE/%E5%8D%8F%E8%AE%AE%E6%A0%88%E8%B0%83%E4%BC%98%E5%8C%96tx/">
+                     
+										    [译] Linux 网络栈监控和调优：发送数据（2017）
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										network
+									</a>
+									
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										base_knowledge
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/network/base_knowledge/tun%20%E4%B8%8E%20tap%20%E8%AE%BE%E5%A4%87%EF%BC%8C%E7%BD%91%E6%A1%A5%E3%80%81VLAN%E3%80%81bonding%20%E7%9A%84%E5%AD%A6%E4%B9%A0/">
+                     
+										    linux内核网络设备
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2019/07/20/network/base_knowledge/%E7%BD%91%E5%8D%A1%20promiscuous%20mode%20%E4%B8%8E%20MAC%20%E7%9A%84%E4%B8%80%E4%BA%9B%20filter%20%E5%8A%9F%E8%83%BD/">
+                     
+										    linux内核网络设备
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										debug
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2020/11/01/network/debug/dropwatch_%E7%9B%91%E6%8E%A7%E5%86%85%E6%A0%B8%E7%9A%84%E7%BD%91%E7%BB%9C%E6%A0%88%E4%B8%A2%E5%8C%85/">
+                     
+										    dropwatch 监控内核的网络栈丢包
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										ethtool
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/11/03/network/ethtool/ethtool_dump_%E7%BD%91%E5%8D%A1%E5%AF%84%E5%AD%98%E5%99%A8/">
+                     
+										    ethtool 代码架构
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/11/04/network/ethtool/ethtool_%E7%9A%84%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/">
+                     
+										    ethtool_的工作原理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										kernel网络
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2022/09/07/network/kernel%E7%BD%91%E7%BB%9C/Linux%E7%BD%91%E5%8D%A1%E9%87%8D%E5%91%BD%E5%90%8D/">
+                     
+										    Linux 网卡重命名
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2019/09/07/network/kernel%E7%BD%91%E7%BB%9C/iproute2%E4%BD%BF%E7%94%A8--nat%E7%BD%91%E6%A1%A5%E9%85%8D%E7%BD%AE/">
+                     
+										    iproute2使用--nat网桥配置
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/11/18/network/kernel%E7%BD%91%E7%BB%9C/rss_rps_rfs/">
+                     
+										    Linux 网卡rss,rps,rfs
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/17/network/kernel%E7%BD%91%E7%BB%9C/%E5%86%85%E6%A0%B8%E6%97%A5%E5%BF%97%E6%89%93%E5%8D%B0%E9%99%90%E9%80%9F/">
+                     
+										    内核日志打印限速
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/network/kernel%E7%BD%91%E7%BB%9C/%E5%8F%8C%E7%BD%91%E5%8D%A1%E7%9A%84bounding%E6%A8%A1%E5%BC%8F/">
+                     
+										    双网卡的bounding模式
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/network/kernel%E7%BD%91%E7%BB%9C/%E7%BD%91%E7%BB%9C%E4%B8%A2%E5%8C%85%E6%95%85%E9%9A%9C%E5%AE%9A%E4%BD%8D%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/">
+                     
+										    网络丢包故障定位全景指南
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/17/network/kernel%E7%BD%91%E7%BB%9C/%E9%80%9A%E8%BF%87%E9%A9%B1%E5%8A%A8%E6%9D%A5%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AAeth_device/">
+                     
+										    通过驱动来创建一个eth device
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/20/network/p4%E7%A8%8B%E5%BA%8F%E7%9A%84%E8%B5%84%E6%BA%90%E4%BC%98%E5%8C%96%E6%8C%87%E5%8D%97/">
+                     
+										    p4程序的资源优化指南
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										rte_kni
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2022/09/07/network/rte_kni/dpdk%20kni%20%E8%99%9A%E6%8B%9F%E7%BD%91%E7%BB%9C%E6%8E%A5%E5%8F%A3%E5%8E%9F%E7%90%86/">
+                     
+										    dpdk 程序kni 虚拟网络接口原理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/07/network/rte_kni/dpdk%20%E7%A8%8B%E5%BA%8F%E5%AF%B9pause%20%E5%B8%A7%E7%9A%84%E5%A4%84%E7%90%86/">
+                     
+										    dpdk 程序对pause 帧的处理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/09/07/network/rte_kni/%E9%80%9A%E8%BF%87slabinfo%E5%AE%9A%E4%BD%8D%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98/">
+                     
+										    dpdk 程序创建 kni 虚拟网络接口失败的问题
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/network/%E5%B8%B8%E7%94%A8%E7%BD%91%E7%BB%9C%E6%95%85%E9%9A%9C%E6%8E%92%E6%9F%A5%E5%B7%A5%E5%85%B7/">
+                     
+										    常用网络故障排查工具
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										other
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/11/01/other/c%E8%AF%AD%E8%A8%80%E6%99%BA%E8%83%BD%E6%8C%87%E9%92%88/">
+                     
+										    c语言-智能指针的用法
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/03/18/other/frpc%E6%9E%81%E7%AE%80%E9%83%A8%E7%BD%B2/">
+                     
+										    frpc极简部署
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/other/githubpage-vscocd-hexo%E6%9E%84%E5%BB%BA%E7%AC%94%E8%AE%B0%E5%8D%9A%E5%AE%A2/">
+                     
+										    githubpage+vscocd+hexo构建笔记博客
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										graphviz
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/other/graphviz/graphviz/">
+                     
+										    graphviz
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/05/24/other/graphviz/tips/">
+                     
+										    graphviz—tips
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/03/11/other/vscode_git_auto_push/">
+                     
+										    vscode-git-自动push
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/other/windows_treminal/">
+                     
+										    windows terminal技巧
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										pcie
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/pcie/dmar--root_table/">
+                     
+										    dmar--root_table
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/pcie/pasid/">
+                     
+										    pasid
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										qemu
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/IPI%E4%B8%AD%E6%96%AD%E6%80%A7%E8%83%BD%E8%AF%84%E4%BC%B0/">
+                     
+										    IPI中断性能评估
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/Kick_vcpu/">
+                     
+										    Kick_vcpu
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/qemu/dhcp%E6%9C%8D%E5%8A%A1%E5%BF%AB%E9%80%9F%E9%83%A8%E7%BD%B2/">
+                     
+										    为qemu运行快速部署dhcp服务
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/gust%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/">
+                     
+										    gust内存管理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/kvm/">
+                     
+										    kvm
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/qemu%20vhost_user%E7%9A%84%E5%88%9D%E5%A7%8B%E5%8C%96%E9%80%BB%E8%BE%91/">
+                     
+										    qemu vhost_user的初始化逻辑
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/qemu/qemu-kvm%E5%86%85%E5%AD%98%E8%99%9A%E6%8B%9F%E5%8C%96/">
+                     
+										    qemu-kvm 内存虚拟化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/qemu/qemu%E5%88%9D%E5%A7%8B%E5%8C%96/">
+                     
+										    qemu 初始化流程
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/12/21/qemu/qemu%E5%90%8E%E7%AB%AF%E5%86%99%E6%B8%85%E9%99%A4%E6%9C%BA%E5%88%B6/">
+                     
+										    qemu后端写清除机制
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/07/21/qemu/qemu%E8%BF%90%E8%A1%8Cvirtio_net%E7%9A%84%E5%87%A0%E7%A7%8D%E6%A8%A1%E5%BC%8F/">
+                     
+										    qemu运行virtio_net的几种模式
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/qom%E6%A8%A1%E5%9E%8B/">
+                     
+										    qom模型
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/vcpu%E8%BF%81%E7%A7%BB/">
+                     
+										    vcpu迁移
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/vmcs/">
+                     
+										    vmcs
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/qemu/%E4%B8%AD%E6%96%AD%E8%99%9A%E6%8B%9F%E5%8C%96/">
+                     
+										    中断虚拟化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										性能优化
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/09/24/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/cpu%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/">
+                     
+										    cpu性能优化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/perf%E6%80%A7%E8%83%BD%E8%A7%82%E6%B5%8B/">
+                     
+										    perf性能观测
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E5%8F%AF%E8%A7%82%E6%B5%8B%E5%B7%A5%E5%85%B7/">
+                     
+										    可观测工具
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										硬件相关
+									</a>
+									
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										dram
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/dram/DRAM%E5%9F%BA%E6%9C%AC%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/">
+                     
+										    DRAM基本工作原理
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/08/29/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/pcie%20%E5%87%80%E8%BD%BD%E8%8D%B7%E8%BD%AC%E5%8F%91%E5%B8%A6%E5%AE%BD/">
+                     
+										    pcie 净载荷转发带宽
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										pcie
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/03/23/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/pcie/PCIe%20ECAM%E4%BB%8B%E7%BB%8D/">
+                     
+										    PCIe ECAM介绍
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/pcie/tlp/">
+                     
+										    tlp
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/08/29/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/rmii/">
+                     
+										    rmii
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/06/29/%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3/serders%E5%8E%9F%E7%90%86/">
+                     
+										    serder
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										虚拟化
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2023/09/20/%E8%99%9A%E6%8B%9F%E5%8C%96/pcie_%E8%99%9A%E6%8B%9F%E5%8C%96/">
+                     
+										    pcie 入门
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2023/09/20/%E8%99%9A%E6%8B%9F%E5%8C%96/vdpa/">
+                     
+										    vdpa代码逻辑
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/07/23/%E8%99%9A%E6%8B%9F%E5%8C%96/virtio/">
+                     
+										    virtio 协议
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E8%99%9A%E6%8B%9F%E5%8C%96/virtio_pci/">
+                     
+										    virtio_pci
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E8%99%9A%E6%8B%9F%E5%8C%96/%E4%B8%AD%E6%96%AD%E8%99%9A%E6%8B%9F%E5%8C%96/">
+                     
+										    中断虚拟化
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/12/03/%E8%99%9A%E6%8B%9F%E5%8C%96/%E5%86%85%E6%A0%B8%E7%9A%84vdpa%E6%96%B9%E6%A1%88/">
+                     
+										    内核的vdpa方案
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/03/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB%E4%BB%A3%E7%A0%81%E9%80%BB%E8%BE%91/">
+                     
+										    热迁移代码逻辑
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										热迁移
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/03/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/0-%E6%80%BB%E4%BD%93%E4%BB%8B%E7%BB%8D/">
+                     
+										    热迁移代码逻辑
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/1-%E5%86%85%E5%AD%98%E7%83%AD%E8%BF%81%E7%A7%BB/">
+                     
+										    内存热迁移
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/1.1-%E5%9F%BA%E7%A1%80%E7%94%A8%E6%B3%95/">
+                     
+										    内存热迁移-基础用法
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/1.2-%E8%84%8F%E9%A1%B5%E6%A0%87%E8%AE%B0/">
+                     
+										    内存热迁移-脏页标记
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/2-%E8%AE%BE%E5%A4%87%E7%83%AD%E8%BF%81%E7%A7%BB/">
+                     
+										    设备热迁移
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2024/04/20/%E8%99%9A%E6%8B%9F%E5%8C%96/%E7%83%AD%E8%BF%81%E7%A7%BB/%E8%AE%BE%E5%A4%87%E7%83%AD%E8%BF%81%E7%A7%BBqemu%E4%B8%8Edpdk%E9%80%9A%E8%BF%87vhost_user%E7%9A%84%E4%BA%A4%E4%BA%92%E6%B5%81%E7%A8%8B/">
+                     
+										    设备热迁移qemu与dpdk通过vhost_user的交互流程
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										读书笔记
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/11/18/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/%E5%BA%B7%E5%BE%B7/">
+                     
+										    纯粹理性批判
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+							<ul>
+								<li class="directory">
+									<a href="#" class="directory">
+										<i class="fa fa-plus-square-o"></i>
+										软件开发
+									</a>
+									
+							<ul>
+								<li class="file">
+									<a href="/2024/07/11/%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91/gdb/">
+                     
+										    常用调试方法
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2022/10/01/%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91/github_action/">
+                     
+										    github action使用介绍
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+							<ul>
+								<li class="file">
+									<a href="/2020/11/01/%E8%BD%AF%E4%BB%B6%E5%BC%80%E5%8F%91/git%E5%B8%B8%E7%94%A8/">
+                     
+										    git 常用命令
+                     
+									</a>
+								</li>
+								<div class="article-toc" style="display: none;"></div>
+							</ul>
+			
+								</li>
+								
+							</ul>
+			
+		</div>
+	</div>
+</div>
+
+
+
+	<!-- 引入正文 -->
+	<div id="content" class="content">
+		<h1 id="article-title">
+	virtio-net-controller
+</h1>
+
+<!-- meta -->
+<div class="article-meta">
+	
+
+	<span>liaocj</span>
+	<span>2024-12-03 09:02:56</span>
+
+  <div id="article-categories">
+    
+		  <span>Categories：</span>
+      
+    
+
+    
+		    <span>Tags：</span>
+        
+    
+  </div>
+
+</div>
+
+<!-- content -->
+<div id="article-content">
+	<h1 id="Nvidia-VirtIO-Net-Controller-Daemon"><a href="#Nvidia-VirtIO-Net-Controller-Daemon" class="headerlink" title="Nvidia VirtIO Net Controller Daemon"></a>Nvidia VirtIO Net Controller Daemon</h1><p>VirtIO net controller enables users to create VirtIO-net emulated PCIe devices<br>in the system where the NVIDIA® BlueField® DPU is connected. This is done by the<br>virtio-net-controller software module present in the DPU. Virtio-net emulated<br>devices allow users to hot plug virtio-net PCIe PF Ethernet NIC devices and<br>virtio-net PCI VF Ethernet NIC devices in the host system where the DPU is<br>plugged in. By using this solution, virtio net device offloads traffic handling<br>from host CPU to the NIC of DPU.</p>
+<h1 id="System-Preparation"><a href="#System-Preparation" class="headerlink" title="System Preparation"></a>System Preparation</h1><p>Use BlueField-2 as example, mst device should be adjusted accordingly otherwise.</p>
+<h2 id="Prepare-DPU-for-hotplug-devices"><a href="#Prepare-DPU-for-hotplug-devices" class="headerlink" title="Prepare DPU for hotplug devices:"></a>Prepare DPU for hotplug devices:</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ mst start
+$ mlxconfig <span class="token parameter variable">-d</span> /dev/mst/mt41686_pciconf0 reset
+$ mlxconfig <span class="token parameter variable">-d</span> /dev/mst/mt41686_pciconf0 s <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PF_BAR2_ENABLE</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PER_PF_NUM_SF</span><span class="token operator">=</span><span class="token number">1</span>
+$ mlxconfig <span class="token parameter variable">-d</span> /dev/mst/mt41686_pciconf0 s <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PCI_SWITCH_EMULATION_ENABLE</span><span class="token operator">=</span><span class="token number">1</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PCI_SWITCH_EMULATION_NUM_PORT</span><span class="token operator">=</span><span class="token number">16</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">VIRTIO_NET_EMULATION_ENABLE</span><span class="token operator">=</span><span class="token number">1</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">VIRTIO_NET_EMULATION_NUM_VF</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">VIRTIO_NET_EMULATION_NUM_PF</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">VIRTIO_NET_EMULATION_NUM_MSIX</span><span class="token operator">=</span><span class="token number">16</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">ECPF_ESWITCH_MANAGER</span><span class="token operator">=</span><span class="token number">1</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">ECPF_PAGE_SUPPLIER</span><span class="token operator">=</span><span class="token number">1</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">SRIOV_EN</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PF_SF_BAR_SIZE</span><span class="token operator">=</span><span class="token number">8</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PF_TOTAL_SF</span><span class="token operator">=</span><span class="token number">64</span>
+$ mlxconfig <span class="token parameter variable">-d</span> /dev/mst/mt41686_pciconf0.1 s <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PF_SF_BAR_SIZE</span><span class="token operator">=</span><span class="token number">10</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PF_TOTAL_SF</span><span class="token operator">=</span><span class="token number">64</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>For transitional (virtio spec 0.95) device, the following options are needed:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token assign-left variable">VIRTIO_NET_EMULATION_PF_PCI_LAYOUT</span><span class="token operator">=</span><span class="token number">1</span>
+<span class="token assign-left variable">VIRTIO_EMULATION_HOTPLUG_TRANS</span><span class="token operator">=</span><span class="token number">1</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>Cold reboot host</p>
+<h2 id="Prepare-DPU-for-static-devices-with-SR-IOV-504-VFs-support"><a href="#Prepare-DPU-for-static-devices-with-SR-IOV-504-VFs-support" class="headerlink" title="Prepare DPU for static devices with SR-IOV (504 VFs) support:"></a>Prepare DPU for static devices with SR-IOV (504 VFs) support:</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ mst start
+$ mlxconfig <span class="token parameter variable">-d</span> /dev/mst/mt41686_pciconf0 reset
+$ mlxconfig <span class="token parameter variable">-d</span> /dev/mst/mt41686_pciconf0 s <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PF_BAR2_ENABLE</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PER_PF_NUM_SF</span><span class="token operator">=</span><span class="token number">1</span>
+$ mlxconfig <span class="token parameter variable">-d</span> /dev/mst/mt41686_pciconf0 s <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PCI_SWITCH_EMULATION_ENABLE</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PCI_SWITCH_EMULATION_NUM_PORT</span><span class="token operator">=</span><span class="token number">0</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">VIRTIO_NET_EMULATION_ENABLE</span><span class="token operator">=</span><span class="token number">1</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">VIRTIO_NET_EMULATION_NUM_VF</span><span class="token operator">=</span><span class="token number">126</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">VIRTIO_NET_EMULATION_NUM_PF</span><span class="token operator">=</span><span class="token number">4</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">VIRTIO_NET_EMULATION_NUM_MSIX</span><span class="token operator">=</span><span class="token number">4</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">ECPF_ESWITCH_MANAGER</span><span class="token operator">=</span><span class="token number">1</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">ECPF_PAGE_SUPPLIER</span><span class="token operator">=</span><span class="token number">1</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">SRIOV_EN</span><span class="token operator">=</span><span class="token number">1</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PF_SF_BAR_SIZE</span><span class="token operator">=</span><span class="token number">8</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PF_TOTAL_SF</span><span class="token operator">=</span><span class="token number">508</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">NUM_OF_VFS</span><span class="token operator">=</span><span class="token number">0</span>
+$ mlxconfig <span class="token parameter variable">-d</span> /dev/mst/mt41686_pciconf0.1 s <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PF_TOTAL_SF</span><span class="token operator">=</span><span class="token number">1</span> <span class="token punctuation">\</span>
+                <span class="token assign-left variable">PF_SF_BAR_SIZE</span><span class="token operator">=</span><span class="token number">8</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>For transitional (virtio spec 0.95) device, the following option is needed:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token assign-left variable">VIRTIO_NET_EMULATION_VF_PCI_LAYOUT</span><span class="token operator">=</span><span class="token number">1</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>Cold reboot host</p>
+<p><strong>NOTE</strong>:</p>
+<ol>
+<li><p>To use static device, it is recommended to blacklist kernel module<br>virtio_pci and virtio_net from guest OS before proceeding. If those modules<br>are built into kernel image, they are not blacklistable. In such case, it’s<br>recommended for users to have a way to start the virtio_net_controller from<br>DPU using SSH or serial&#x2F;oob interfaces. This can be achieved by connecting<br>the RShim&#x2F;serial cable to another host, or setting up the OOB interface.</p>
+<p> Normally, this is not needed as controller daemon starts automatically when</p>
+</li>
+</ol>
+<p>system boots.</p>
+<ol start="2">
+<li><p>For the systems which BIOS is not doing address space allocation for<br>unpopulated downstream ports of the pcie switch, <strong>“pci&#x3D;realloc”</strong> is needed<br>inside boot commandline.</p>
+<p> It is recommended to add <strong>“pci&#x3D;assign-busses”</strong> to boot command line when</p>
+</li>
+</ol>
+<p>creating more than 127 VFs. Without this option, errors below might appear<br>from host. And virio driver won’t probe those devices as type is incorrect.<br>    <pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token punctuation">[</span>  <span class="token number">617.382854</span><span class="token punctuation">]</span> pci 0000:84:00.0: <span class="token punctuation">[</span>1af4:1041<span class="token punctuation">]</span> <span class="token builtin class-name">type</span> 7f class 0xffffff
+<span class="token punctuation">[</span>  <span class="token number">617.382883</span><span class="token punctuation">]</span> pci 0000:84:00.0: unknown header <span class="token builtin class-name">type</span> 7f, ignoring device<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre></p>
+<ol start="3">
+<li><p>To support more than 127 VFs, hotplug capability shall be disabled by changing mlxconfig options below:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token assign-left variable">PCI_SWITCH_EMULATION_ENABLE</span><span class="token operator">=</span><span class="token number">0</span>
+<span class="token assign-left variable">PCI_SWITCH_EMULATION_NUM_PORT</span><span class="token operator">=</span><span class="token number">0</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+</li>
+<li><p>Max number of VFs supported by each mst device is calculated by the formula<br>below based on mlxconfig options.</p>
+ <pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">max_num_vf <span class="token operator">=</span> VIRTIO_NET_EMULATION_NUM_VF * VIRTIO_NET_EMULATION_NUM_PF<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p> VIRTIO_NET_EMULATION_NUM_VF is reserved for each PF out of VIRTIO_NET_EMULATION_NUM_PF.<br> As of now, max_num_vf is 504 for BlueField-2. Note that, to support the<br> maximal number of virtio net VFs, NUM_OF_VFS, VIRTIO_BLK_EMULATION_NUM_VF and<br> VIRTIO_BLK_EMULATION_NUM_PF should all be 0.</p>
+</li>
+</ol>
+<h1 id="Building"><a href="#Building" class="headerlink" title="Building"></a>Building</h1><p>Dependency:<br>    mlnx-ofed, mlnx-libsnap, libev, libev-devel, libmnl-devel</p>
+<p>To build and install this daemon, depends on the packet, there are different<br>steps.</p>
+<h2 id="Release-Tarball"><a href="#Release-Tarball" class="headerlink" title="Release Tarball"></a>Release Tarball</h2><p>Follow steps below if you received the release tarball after untar:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ ./build.sh <span class="token parameter variable">-g</span> <span class="token punctuation">[</span>-d<span class="token punctuation">]</span>       <span class="token comment"># configure [debug]</span>
+$ ./build.sh <span class="token parameter variable">-b</span> <span class="token punctuation">[</span>-c<span class="token punctuation">]</span> <span class="token punctuation">[</span>-v<span class="token punctuation">]</span>  <span class="token comment"># make [clean] [verbose] and make install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>Or you can run all steps above in one shot.</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ ./build.sh<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<h2 id="Git-Repository"><a href="#Git-Repository" class="headerlink" title="Git Repository"></a>Git Repository</h2><p>Follow steps below if you’re developing on top of the git repository.</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ ./build.sh <span class="token parameter variable">-a</span>            <span class="token comment"># autogen and apply patches</span>
+$ ./build.sh <span class="token parameter variable">-g</span> <span class="token punctuation">[</span>-d<span class="token punctuation">]</span>       <span class="token comment"># configure [debug]</span>
+$ ./build.sh <span class="token parameter variable">-b</span> <span class="token punctuation">[</span>-c<span class="token punctuation">]</span> <span class="token punctuation">[</span>-v<span class="token punctuation">]</span>  <span class="token comment"># make [clean] [verbose] and make install</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>Also you can run all steps above in one shot.</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ ./build.sh<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>Typically the autogen and configure steps only need to be done the first time<br>unless configure.ac or Makefile.am changes.</p>
+<p>To build rpm&#x2F;deb:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ scripts/build_rpm.sh
+$ <span class="token function">tar</span> <span class="token parameter variable">-xvf</span> *.gz
+$ <span class="token builtin class-name">cd</span> virtio-net-controller-<span class="token operator">&lt;</span>ver<span class="token operator">></span>
+$ dpkg-buildpackage<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h1 id="Usage"><a href="#Usage" class="headerlink" title="Usage"></a>Usage</h1><p>The controller has a systemd service running and a user interface tool to<br>communicate with the service.</p>
+<ul>
+<li>Service: virtio-net-controller.service</li>
+<li>User Interface: virtnet</li>
+<li>Log: controller is using system log system. Run:<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ journalctl <span class="token parameter variable">-u</span> virtio-net-controller<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></li>
+</ul>
+<h2 id="Controller-Service"><a href="#Controller-Service" class="headerlink" title="Controller Service"></a>Controller Service</h2><p>If controller is running on a DPU, the service is enabled by default. It starts<br>automatically. Run command below to check the status.</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ systemctl status virtio-net-controller.service<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>If daemon is not running, start controller by running command below.<br>Make sure to check the status after command starts.</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ systemctl start virtio-net-controller.service<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>To stop the daemon, first unload virtio-net&#x2F;virtio-pci from host. Then run<br>command below from DPU:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ systemctl stop virtio-net-controller.service<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>To enable the daemon automatically start, run:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ systemctl <span class="token builtin class-name">enable</span> virtio-net-controller.service<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<h2 id="Controller-Recovery"><a href="#Controller-Recovery" class="headerlink" title="Controller Recovery"></a>Controller Recovery</h2><p>It is possible to recover the control and data planes if communications are<br>interrupted so the original traffic can resume.</p>
+<p>Recovery depends on the JSON files stored in <strong>&#x2F;opt&#x2F;mellanox&#x2F;mlnx_virtnet&#x2F;recovery</strong><br>where each recovery file corresponds to each device (either PF or VF).</p>
+<p>Following is an example of the file:</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+  <span class="token property">"port_ib_dev"</span><span class="token operator">:</span> <span class="token string">"mlx5_0"</span><span class="token punctuation">,</span>
+  <span class="token property">"pf_id"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  <span class="token property">"function_type"</span><span class="token operator">:</span> <span class="token string">"pf"</span><span class="token punctuation">,</span>
+  <span class="token property">"bdf_raw"</span><span class="token operator">:</span> <span class="token number">26624</span><span class="token punctuation">,</span>
+  <span class="token property">"device_type"</span><span class="token operator">:</span> <span class="token string">"hotplug"</span><span class="token punctuation">,</span>
+  <span class="token property">"mac"</span><span class="token operator">:</span> <span class="token string">"0c:c4:7a:ff:22:93"</span><span class="token punctuation">,</span>
+  <span class="token property">"pf_num"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  <span class="token property">"sf_num"</span><span class="token operator">:</span> <span class="token number">2000</span><span class="token punctuation">,</span>
+  <span class="token property">"mq"</span><span class="token operator">:</span> <span class="token number">1</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>These files should not be modified&#x2F;deleted under normal circumstances.<br>However, if necessary, advanced users may tune settings or delete the file<br>to meet their requirements.</p>
+<p>Note: users are responsible for the validity of the recovery files and should<br>only modify&#x2F;delete them when the controller is not running.</p>
+<h2 id="Controller-Configuration-Files"><a href="#Controller-Configuration-Files" class="headerlink" title="Controller Configuration Files"></a>Controller Configuration Files</h2><h3 id="Main-Configuration"><a href="#Main-Configuration" class="headerlink" title="Main Configuration"></a>Main Configuration</h3><p>A config file <strong>&#x2F;opt&#x2F;mellanox&#x2F;mlnx_virtnet&#x2F;virtnet.conf</strong> can be used to set<br>parameters for the service. If config file is changed while controller service<br>is running, the new config won’t take effect until service is reloaded.</p>
+<p>Currently supported options:</p>
+<ul>
+<li>ib_dev_p0:<br>  RDMA device(e.g, mlx5_0) which is used to create SF on port 0.<br>  This port is emu manager when is_lag is 0, default value is mlx5_0.</li>
+<li>ib_dev_p1:<br>  RDMA device(e.g, mlx5_1) which is used to create SF on port 1.<br>  Default value is mlx5_1.</li>
+<li>ib_dev_lag:<br>  RDMA lag device(e.g, mlx5_bond_0) which is used to create SF on lag.<br>  Default value is mlx5_bond_0, this port is emu manager when is_lag is 1.<br>  ib_dev_lag and ib_dev_p0&#x2F;1 can’t be configured simultaneously.</li>
+<li>ib_dev_for_static_pf:<br>  RDMA device(e.g, mlx5_0) which the static virtIO PF will be created on.</li>
+<li>is_lag:<br>  Whether or not LAG is used. Note that if lag is used, make sure to use<br>  the correct IB dev for static PF.</li>
+<li>recovery:<br>  Whether recovery feature is enabled. If not specified, recovery feature<br>  is enabled by default; to disable it, put recovery to 0.</li>
+<li>sf_pool_percent:<br>  Determines the initial SF pool size as the percentage of max_sf of<br>  HCA capability. The valid value is in [0, 100]. For instance, if this<br>  value is 5, it means a SF pool with 5% x max_sf will be created.<br>  0 means no SF pool will be reserved beforehand. Default is 0.</li>
+<li>sf_pool_force_destroy:<br>  Whether to destroy the SF pool. When set 1, the controller will destroy<br>  the SF pool when being stopped&#x2F;restarted (and the SF pool will be recreated<br>  if sf_pool_percent is not 0 when starting), otherwise it won’t. Default is 0.</li>
+<li>single_port:<br>  Whether the NIC has only single port. Default is 0 i.e. dual ports. Note<br>  this flag and “is_lag” are mutually exclusive.</li>
+<li>static_pf:<br>  mac_base: Base MAC address for static PFs. MACs are automatically assigned<br>  withfollowing pattern: mac_base-&gt;pf_0, mac_base + 1 -&gt; pf_1, etc. Note that<br>  controller won’t validate the MAC address (other than the length), user<br>  must ensure MAC is valid and unique.<br>  features: Virtio features to use. If not specified, a default one will be used.</li>
+<li>vf:<br>  mac_base: Base MAC address for VFs. MACs are automatically assigned with<br>  following pattern: mac_base-&gt;vf_0, mac_base + 1 -&gt; vf_1, etc. Note that<br>  controller won’t validate the MAC address (other than the length), user<br>  must ensure MAC is valid and unique.<br>  features: Virtio features to use. If not specified, a default one will be used.<br>  vfs_per_pf: The number of VFs will be created on each PF, and <strong>this is<br>  mandatory if mac_base is specified</strong>. Note this is not<br>  VIRTIO_NET_EMULATION_NUM_VF in mlxconfig, but<br>  vfs_per_pf &lt;&#x3D; VIRTIO_NET_EMULATION_NUM_VF.</li>
+</ul>
+<p>Here is an example for non-lag(JSON format):</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+  <span class="token property">"ib_dev_p0"</span><span class="token operator">:</span> <span class="token string">"mlx5_0"</span><span class="token punctuation">,</span>
+  <span class="token property">"ib_dev_p1"</span><span class="token operator">:</span> <span class="token string">"mlx5_1"</span><span class="token punctuation">,</span>
+  <span class="token property">"ib_dev_for_static_pf"</span><span class="token operator">:</span> <span class="token string">"mlx5_0"</span><span class="token punctuation">,</span>
+  <span class="token property">"is_lag"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  <span class="token property">"recovery"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token property">"sf_pool_percent"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  <span class="token property">"sf_pool_force_destroy"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  <span class="token property">"static_pf"</span><span class="token operator">:</span> <span class="token punctuation">&#123;</span>
+    <span class="token property">"mac_base"</span><span class="token operator">:</span> <span class="token string">"11:22:33:44:55:66"</span><span class="token punctuation">,</span>
+    <span class="token property">"features"</span><span class="token operator">:</span> <span class="token string">"0x230047082b"</span><span class="token punctuation">,</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+  <span class="token property">"vf"</span><span class="token operator">:</span> <span class="token punctuation">&#123;</span>
+    <span class="token property">"mac_base"</span><span class="token operator">:</span> <span class="token string">"CC:48:15:FF:00:00"</span><span class="token punctuation">,</span>
+    <span class="token property">"features"</span><span class="token operator">:</span> <span class="token string">"0x230047082b"</span><span class="token punctuation">,</span>
+    <span class="token property">"vfs_per_pf"</span><span class="token operator">:</span> <span class="token number">100</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>Here is an example for lag(JSON format):</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+  <span class="token property">"ib_dev_lag"</span><span class="token operator">:</span> <span class="token string">"mlx5_bond_0"</span><span class="token punctuation">,</span>
+  <span class="token property">"ib_dev_for_static_pf"</span><span class="token operator">:</span> <span class="token string">"mlx5_bond_0"</span><span class="token punctuation">,</span>
+  <span class="token property">"is_lag"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token property">"recovery"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token property">"sf_pool_percent"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  <span class="token property">"sf_pool_force_destroy"</span><span class="token operator">:</span> <span class="token number">0</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>Here is an example for single_port (JSON format):</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+  <span class="token property">"ib_dev_p0"</span><span class="token operator">:</span> <span class="token string">"mlx5_2"</span><span class="token punctuation">,</span>
+  <span class="token property">"ib_dev_for_static_pf"</span><span class="token operator">:</span> <span class="token string">"mlx5_2"</span><span class="token punctuation">,</span>
+  <span class="token property">"single_port"</span><span class="token operator">:</span> <span class="token number">1</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="Provider-Configuration"><a href="#Provider-Configuration" class="headerlink" title="Provider Configuration"></a>Provider Configuration</h3><p>To support different provider other than the default ACE, configuration files<br>located in <strong>&#x2F;opt&#x2F;mellanox&#x2F;mlnx_virtnet&#x2F;providers</strong> can be used.</p>
+<p>Format of config files:</p>
+<ul>
+<li>File name should be the provider name</li>
+<li>Two keywords are supported:<ol>
+<li>provider: name of the provider, this has to be the accurate provider name,<br>currently <strong>ace</strong> and <strong>dpa</strong> are the only valid options.</li>
+<li>score: weight score for this provider, the higher one will win if tie</li>
+</ol>
+</li>
+<li>More than one config file can be used, each should have at most one provider</li>
+<li>In each config file, if more than one provider&#x2F;score are defined, only the last<br>one will take effect</li>
+<li>Each line can be commented out via “#”</li>
+<li>Empty line will be ignored</li>
+<li>Case insensitive, i.e. Provider&#x3D;abc is same as provider&#x3D;abc</li>
+</ul>
+<p>A Sample:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">ace.provider
+<span class="token comment"># ace.so is one provider</span>
+<span class="token assign-left variable">Provider</span><span class="token operator">=</span>ace
+<span class="token assign-left variable">Score</span><span class="token operator">=</span><span class="token number">100</span>
+
+dpa.provider
+<span class="token comment"># dpa.so is another provider</span>
+<span class="token assign-left variable">Provider</span><span class="token operator">=</span>dpa
+<span class="token assign-left variable">Score</span><span class="token operator">=</span><span class="token number">200</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="Controller-User-Interface"><a href="#Controller-User-Interface" class="headerlink" title="Controller User Interface"></a>Controller User Interface</h2><p>Each command has its own help manual, e.g, <em>virtnet list -h</em></p>
+<ol>
+<li>list current devices</li>
+</ol>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ virtnet list<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<ol start="2">
+<li>query detailed info of all current devices (-a) or a specific device (-p, -v or -u).<br>–brief (or -b) can be used to ignore queue info.</li>
+</ol>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ virtnet query <span class="token parameter variable">-a</span> <span class="token punctuation">[</span>-b<span class="token punctuation">]</span>
+$ virtnet query <span class="token parameter variable">-p</span> pf_id <span class="token punctuation">[</span>-v vf_id<span class="token punctuation">]</span> <span class="token punctuation">[</span>-b<span class="token punctuation">]</span>
+$ virtnet query <span class="token parameter variable">-u</span> <span class="token string">"VUID string"</span> <span class="token punctuation">[</span>-b<span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li>Hotplug virtio net device with 1500 mtu and 3 virtio queues of depth 1024 entries with vlan control support, data path relies on mlx5_0:</li>
+</ol>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ virtnet hotplug <span class="token parameter variable">-i</span> mlx5_0 <span class="token parameter variable">-f</span> 0x80000 <span class="token parameter variable">-m</span> 0C:C4:7A:FF:22:93 <span class="token parameter variable">-t</span> <span class="token number">1500</span> <span class="token parameter variable">-n</span> <span class="token number">3</span> <span class="token parameter variable">-s</span> <span class="token number">1024</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>For transitional (virtio spec 0.95) device, “-l” or “–legacy” can be used.</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ virtnet hotplug <span class="token parameter variable">-i</span> mlx5_0 <span class="token punctuation">..</span>. <span class="token parameter variable">-l</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>Note: if Linux kernel version is &lt; 4.0 or CentOS 6 or Ubuntu 12.04, –legacy is<br>mandatory. Otherwise, even with –legacy, the device will still be driven as a modern<br>one by default, unless the force_legacy flag is used for virtio_pci driver <strong>on the host</strong>,<br>as below:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ modprobe <span class="token parameter variable">-v</span> virtio_pci <span class="token assign-left variable">force_legacy</span><span class="token operator">=</span><span class="token number">1</span>
+
+or
+
+Append <span class="token assign-left variable">virtio_pci.force_legacy</span><span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">in</span> kernel cmdline<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>Max number of virtio queues are bounded by the minimum of the numbers below</p>
+<ul>
+<li><code>VIRTIO_NET_EMULATION_NUM_MSIX</code> from <code>mlxconfig -d &lt;mst_dev&gt; q</code></li>
+<li><code>max_virtq</code> from <code>virtnet list</code></li>
+</ul>
+<p>If hotplug succeeds, hotplug device info returns similar as below:</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+  <span class="token property">"bdf"</span><span class="token operator">:</span> <span class="token string">"84:0.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token property">"transitional"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  <span class="token property">"sf_rep_net_device"</span><span class="token operator">:</span> <span class="token string">"en3f0pf0sf1001"</span><span class="token punctuation">,</span>
+  <span class="token property">"mac"</span><span class="token operator">:</span> <span class="token string">"0C:C4:7A:FF:22:93"</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>Add the SF interface to corresponding OVS bridge. Also, make sure the MTU of SF<br>rep is configured the same or greater than the virtio net device.</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ ovs add-port <span class="token operator">&lt;</span>bridge<span class="token operator">></span> en3f0pf0sf1001<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<ol start="4">
+<li>Modify the MAC address of virtio physical device ID 0 (or with its “VUID string”,<br>which can be obtained through virtnet list&#x2F;query)</li>
+</ol>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ virtnet modify <span class="token parameter variable">-p</span> <span class="token number">0</span> device <span class="token parameter variable">-m</span> 0C:C4:7A:FF:22:93
+$ virtnet modify <span class="token parameter variable">-u</span> <span class="token string">"VUID string"</span> device <span class="token parameter variable">-m</span> 0C:C4:7A:FF:22:93<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ol start="5">
+<li>Modify the max queue size of device</li>
+</ol>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ virtnet modify <span class="token parameter variable">-p</span> <span class="token number">0</span> <span class="token parameter variable">-v</span> <span class="token number">0</span> device <span class="token parameter variable">-q</span> <span class="token number">2048</span>
+$ virtnet modify <span class="token parameter variable">-u</span> <span class="token string">"VUID string"</span> device <span class="token parameter variable">-q</span> <span class="token number">2048</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ol start="6">
+<li>Modify the MSI-X number of VF device</li>
+</ol>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ virtnet modify <span class="token parameter variable">-p</span> <span class="token number">0</span> <span class="token parameter variable">-v</span> <span class="token number">0</span> device <span class="token parameter variable">-n</span> <span class="token number">8</span>
+$ virtnet modify <span class="token parameter variable">-u</span> <span class="token string">"VUID string"</span> device <span class="token parameter variable">-n</span> <span class="token number">8</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ol start="7">
+<li>Modify the queue options of virtio physical device ID 0</li>
+</ol>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ virtnet modify <span class="token parameter variable">-p</span> <span class="token number">0</span> queue <span class="token parameter variable">-e</span> event <span class="token parameter variable">-n</span> <span class="token number">10</span> <span class="token parameter variable">-c</span> <span class="token number">30</span>
+$ virtnet modify <span class="token parameter variable">-u</span> <span class="token string">"VUID string"</span> queue <span class="token parameter variable">-e</span> event <span class="token parameter variable">-n</span> <span class="token number">10</span> <span class="token parameter variable">-c</span> <span class="token number">30</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p><strong>Note: to modify MAC, MTU, features, msix_num and max_queue_size, device<br>unbind and bind on guest OS is necessary, as follows:</strong></p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ <span class="token builtin class-name">cd</span> /sys/bus/pci/drivers/virtio-pci/
+$ <span class="token builtin class-name">echo</span> <span class="token string">"bdf of device"</span> <span class="token operator">></span> unbind
+
+perform <span class="token string">"virtnet modify ..."</span> on controller side
+
+$ <span class="token builtin class-name">echo</span> <span class="token string">"bdf of device"</span> <span class="token operator">></span> <span class="token builtin class-name">bind</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="8">
+<li>Unplug virtio physical device ID 0, only applicable to hotplug device</li>
+</ol>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ virtnet unplug <span class="token parameter variable">-p</span> <span class="token number">0</span>
+$ virtnet unplug <span class="token parameter variable">-u</span> <span class="token string">"VUID string"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ol start="9">
+<li>Live update controller</li>
+</ol>
+<p>Install rpm&#x2F;deb package</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ <span class="token function">rpm</span> <span class="token parameter variable">-Uvh</span> virtio-net-controller-x.y.z-1.mlnx.aarch64.rpm <span class="token parameter variable">--force</span>
+$ dpkg --force-all <span class="token parameter variable">-i</span> virtio-net-controller-x.y.z-1.mlnx.aarch64.deb<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>Then perform following commands:</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">$ virtnet version        to check destination controller version
+$ virtnet update <span class="token parameter variable">-s</span>      to start live update
+$ virtnet update <span class="token parameter variable">-t</span>      to check live update status<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="Limitations"><a href="#Limitations" class="headerlink" title="Limitations"></a>Limitations</h2><ol>
+<li>When port MTU (p0&#x2F;p1 from DPU) is changed(e.g, from 1500 to 9000) after<br>controller starts, it is required to restart controller service.</li>
+</ol>
+
+</div>
+
+<!-- post-guide -->
+
+    <div class="post-guide">
+        <div class="item left">
+            
+              <a href="/2024/12/03/dpdk/dpdk_memzone_mpool_mbuf%E5%85%B3%E7%B3%BB%E6%A2%B3%E7%90%86/">
+                  <i class="fa fa-angle-left" aria-hidden="true"></i>
+                  dpdk_memzone_mpool_mbuf关系梳理
+              </a>
+            
+        </div>
+        <div class="item right">
+            
+              <a href="/2024/12/03/DOCA/%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C/">
+                基本操作
+                <i class="fa fa-angle-right" aria-hidden="true"></i>
+              </a>
+            
+        </div>
+    </div>
+
+
+<!-- comment - giscus -->
+
+
+<!-- comment - valine -->
+
+
+<script>
+	
+	
+</script>
+	</div>
+	<div id="footer">
+	<p>
+	©<span id="footerYear-start"></span>-<span id="footerYear-end"></span>
+
+	
+	    <a href="/">liaocj</a>
+	
+
+	
+	<br>
+	Theme <a href="//github.com/sisyphus1212" target="_blank">Tree</a>
+	by <a href="//space.bilibili.com/228776952" target="_blank">liaocj</a>
+	Powered by <a href="//hexo.io" target="_blank">Hexo</a>
+	</p>
+</div>
+
+
+<script type="text/javascript">
+	document.getElementById('footerYear-start').innerHTML = new Date().getFullYear() + '';
+</script>
+
+<script type="text/javascript">
+	document.getElementById('footerYear-end').innerHTML = new Date().getFullYear() + '';
+</script>
+
+    <script src='https://unpkg.com/mermaid@7.1.2/dist/mermaid.min.js'></script>
+    <script>
+      if (window.mermaid) {
+        mermaid.initialize({theme: 'forest'});
+      }
+    </script>
+
+
+
+
+<script src='https://cdnjs.cloudflare.com/ajax/libs/viz.js/1.7.1/viz.js'></script>
+<script>
+  String.prototype.replaceAll = function(search, replacement) {
+	var target = this;
+	return target.split(search).join(replacement);
+  };
+  let vizObjects = document.querySelectorAll('.graphviz')
+  for (let item of vizObjects) {
+	let svg = undefined
+	try {
+	  svg = Viz(item.textContent.replaceAll('–', '--'), 'svg')
+	} catch(e) {
+	  svg = `<pre class="error">${e}</pre>`
+	}
+	item.outerHTML = svg
+  }
+</script>
+
+<!-- D3.js -->
+<script src="https://d3js.org/d3.v6.min.js"></script>
+
+<script>
+(function(d3) {
+    function initializeZoom(d3, svgElement) {
+        if (!svgElement) {
+            console.error('SVG element not found or passed incorrectly.');
+            return;
+        }
+
+        const zoomBehavior = d3.zoom()
+            .on('zoom', (event) => {
+                d3.select(svgElement).select('g').attr("transform", event.transform);
+            });
+
+        d3.select(svgElement).call(zoomBehavior).on("dblclick.zoom", null);
+        console.log('Zoom initialized on:', svgElement);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select the svg that contains #graph0 by using closest to find the parent SVG of #graph0
+        const graph0 = document.querySelector('#graph0');
+        if (graph0) {
+            const svgElement = graph0.closest('svg'); // Find the closest svg ancestor
+            if (svgElement) {
+                initializeZoom(d3, svgElement);
+            } else {
+                console.error('No SVG element found containing #graph0');
+            }
+        } else {
+            console.error('Element with id #graph0 not found.');
+        }
+    });
+})(window.d3);
+</script>
+
+	<button id="totop-toggle" class="toggle"><i class="fa fa-angle-double-up" aria-hidden="true"></i></button>
+</body>
+</html>
